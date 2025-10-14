@@ -326,7 +326,7 @@ After VMs are created:
    cd ../ansible
    # Install on first control node with --cluster-init
    ansible-playbook k3s-ha-install.yml --limit k3s-control-01
-   
+
    # Join additional control nodes and workers
    ansible-playbook k3s-ha-install.yml
    ```
@@ -354,9 +354,9 @@ This setup implements K3s HA with embedded etcd as per [K3s HA documentation](ht
 
 ### HA Requirements
 
-✅ **Minimum 3 control plane nodes** (for etcd quorum)  
-✅ **Odd number of control nodes** (3, 5, 7)  
-✅ **Network connectivity** between all control nodes  
+✅ **Minimum 3 control plane nodes** (for etcd quorum)
+✅ **Odd number of control nodes** (3, 5, 7)
+✅ **Network connectivity** between all control nodes
 ✅ **Ports open**: 6443 (API), 2379-2380 (etcd)
 
 ### Verifying HA Status
@@ -454,3 +454,55 @@ For issues and questions:
 - Review Proxmox and Terraform documentation
 - Check provider issues: https://github.com/bpg/terraform-provider-proxmox/issues
 
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | ~> 1.13 |
+| <a name="requirement_proxmox"></a> [proxmox](#requirement\_proxmox) | ~> 0.85 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | 0.85.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [proxmox_virtual_environment_vm.k3s_nodes](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/virtual_environment_vm) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_k3s_vms"></a> [k3s\_vms](#input\_k3s\_vms) | K3s cluster VM specifications | <pre>map(object({<br>    vm_id      = number<br>    name       = string<br>    cores      = number<br>    memory     = number<br>    ip_address = string<br>    role       = string<br>  }))</pre> | <pre>{<br>  "control_01": {<br>    "cores": 2,<br>    "ip_address": "192.168.1.100",<br>    "memory": 4096,<br>    "name": "k3s-main-tf-01",<br>    "role": "control",<br>    "vm_id": 210<br>  },<br>  "worker_01": {<br>    "cores": 2,<br>    "ip_address": "192.168.1.101",<br>    "memory": 2048,<br>    "name": "k3s-worker-tf-01",<br>    "role": "worker",<br>    "vm_id": 211<br>  },<br>  "worker_02": {<br>    "cores": 2,<br>    "ip_address": "192.168.1.102",<br>    "memory": 2048,<br>    "name": "k3s-worker-tf-02",<br>    "role": "worker",<br>    "vm_id": 212<br>  },<br>  "worker_03": {<br>    "cores": 2,<br>    "ip_address": "192.168.1.103",<br>    "memory": 2048,<br>    "name": "k3s-worker-tf-03",<br>    "role": "worker",<br>    "vm_id": 213<br>  }<br>}</pre> | no |
+| <a name="input_network"></a> [network](#input\_network) | Network configuration for VMs | <pre>object({<br>    gateway     = string<br>    cidr_suffix = string<br>  })</pre> | <pre>{<br>  "cidr_suffix": "/24",<br>  "gateway": "192.168.1.1"<br>}</pre> | no |
+| <a name="input_proxmox"></a> [proxmox](#input\_proxmox) | Proxmox connection configuration | <pre>object({<br>    endpoint = string<br>    node     = string<br>    insecure = bool<br>    ssh_user = string<br>  })</pre> | <pre>{<br>  "endpoint": "https://192.168.1.250:8006",<br>  "insecure": true,<br>  "node": "msi-proxmox",<br>  "ssh_user": "root"<br>}</pre> | no |
+| <a name="input_proxmox_auth"></a> [proxmox\_auth](#input\_proxmox\_auth) | Proxmox authentication credentials | <pre>object({<br>    api_token    = string<br>    username     = string<br>    password     = string<br>    ssh_password = string<br>  })</pre> | n/a | yes |
+| <a name="input_proxmox_infrastructure"></a> [proxmox\_infrastructure](#input\_proxmox\_infrastructure) | Proxmox infrastructure settings | <pre>object({<br>    storage_pool   = string<br>    network_bridge = string<br>    template_vm_id = number<br>  })</pre> | <pre>{<br>  "network_bridge": "vmbr0",<br>  "storage_pool": "local-lvm",<br>  "template_vm_id": 9000<br>}</pre> | no |
+| <a name="input_vm_cloudinit"></a> [vm\_cloudinit](#input\_vm\_cloudinit) | Cloud-init configuration for VMs | <pre>object({<br>    username       = string<br>    password       = string<br>    ssh_public_key = string<br>  })</pre> | n/a | yes |
+| <a name="input_vm_defaults"></a> [vm\_defaults](#input\_vm\_defaults) | Default VM configuration | <pre>object({<br>    disk_interface = string<br>    disk_size      = number<br>    qemu_agent = object({<br>      enabled = bool<br>      timeout = string<br>    })<br>    behavior = object({<br>      on_boot         = bool<br>      started         = bool<br>      stop_on_destroy = bool<br>    })<br>  })</pre> | <pre>{<br>  "behavior": {<br>    "on_boot": true,<br>    "started": true,<br>    "stop_on_destroy": true<br>  },<br>  "disk_interface": "scsi0",<br>  "disk_size": 17,<br>  "qemu_agent": {<br>    "enabled": true,<br>    "timeout": "15m"<br>  }<br>}</pre> | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| <a name="output_ansible_inventory_ini"></a> [ansible\_inventory\_ini](#output\_ansible\_inventory\_ini) | Ansible inventory in INI format |
+| <a name="output_ansible_inventory_json"></a> [ansible\_inventory\_json](#output\_ansible\_inventory\_json) | Ansible inventory in JSON format |
+| <a name="output_cluster_summary"></a> [cluster\_summary](#output\_cluster\_summary) | High-level cluster configuration summary |
+| <a name="output_control_plane_ips"></a> [control\_plane\_ips](#output\_control\_plane\_ips) | IP addresses of control plane nodes |
+| <a name="output_vm_ids"></a> [vm\_ids](#output\_vm\_ids) | Map of VM names to their VM IDs |
+| <a name="output_vm_ip_addresses"></a> [vm\_ip\_addresses](#output\_vm\_ip\_addresses) | Map of VM names to their IP addresses |
+| <a name="output_vm_ipv4_addresses"></a> [vm\_ipv4\_addresses](#output\_vm\_ipv4\_addresses) | IPv4 addresses reported by QEMU agent |
+| <a name="output_vm_mac_addresses"></a> [vm\_mac\_addresses](#output\_vm\_mac\_addresses) | MAC addresses of VM network interfaces |
+| <a name="output_vm_names"></a> [vm\_names](#output\_vm\_names) | List of all VM names |
+| <a name="output_vm_network_details"></a> [vm\_network\_details](#output\_vm\_network\_details) | Complete network configuration for all VMs |
+| <a name="output_worker_node_ips"></a> [worker\_node\_ips](#output\_worker\_node\_ips) | IP addresses of worker nodes |
+<!-- END_TF_DOCS -->

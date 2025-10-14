@@ -28,4 +28,3 @@ provider "proxmox" {
     # password = var.proxmox_auth.ssh_password
   }
 }
-

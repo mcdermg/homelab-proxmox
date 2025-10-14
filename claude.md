@@ -316,17 +316,17 @@ variable "k3s_vms" {
 ```hcl
 resource "proxmox_virtual_environment_vm" "k3s_nodes" {
   for_each = var.k3s_vms
-  
+
   name      = each.value.name
   node_name = var.proxmox.node
   vm_id     = each.value.vm_id
-  
+
   disk {
     datastore_id = var.proxmox_infrastructure.storage_pool
     interface    = var.vm_defaults.disk_interface
     size         = var.vm_defaults.disk_size
   }
-  
+
   initialization {
     ip_config {
       ipv4 {
@@ -510,7 +510,7 @@ cat >> ../ansible/hosts.ini << EOF
 [k3s_control]
 k3s-control-pi ansible_host=192.168.1.209
 
-[k3s_workers]  
+[k3s_workers]
 k3s-worker-pi ansible_host=192.168.1.210
 EOF
 
@@ -666,7 +666,7 @@ sudo cloud-init query --all
 ## User Preferences
 
 - Senior DevOps engineer with GCP/GKE background
-- Extensive Terraform and Ansible experience  
+- Extensive Terraform and Ansible experience
 - Prefers clean, maintainable IaC
 - Values DRY principles and operational simplicity
 - Technical enough to understand implementation details
@@ -720,3 +720,13 @@ Potential improvements to consider:
 - [K3s Documentation](https://docs.k3s.io/)
 - [Terraform Best Practices](https://www.terraform.io/docs/cloud/guides/recommended-practices/)
 
+## Safeguards
+1. Always check if a value should be a variable
+2. Always try to use existing variables rather than creating new ones
+3. Always maintain DRY principles
+5. Always keep comments simple and clean
+6. Test changes with `terraform plan` before committing
+7. NEVER run terraform apply
+8. NEVER run terraform destroy
+9. NEVER run terraform destroy -auto-approve
+10. NEVER run terraform destroy -auto-approve

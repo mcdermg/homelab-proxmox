@@ -142,36 +142,3 @@ variable "k3s_vms" {
     }
   }
 }
-
-# QEMU GUEST AGENT
-variable "qemu_agent_enabled" {
-  description = "Enable QEMU guest agent for VMs"
-  type        = bool
-  default     = true
-}
-
-variable "qemu_agent_timeout" {
-  description = "Timeout for QEMU agent operations"
-  type        = string
-  default     = "15m"
-}
-
-# VM BEHAVIOR
-variable "vm_on_boot" {
-  description = "Start VMs automatically on Proxmox boot"
-  type        = bool
-  default     = true
-}
-
-variable "vm_started" {
-  description = "VM power state after creation"
-  type        = bool
-  default     = true
-}
-
-variable "vm_stop_on_destroy" {
-  description = "Stop VM before destroying (vs force shutdown)"
-  type        = bool
-  default     = true
-}
-
