@@ -1,87 +1,144 @@
-locals {
-  # Construct full IP addresses with CIDR
-  vm_ip_configs = {
-    for key, vm in var.k3s_vms :
-    key => "${vm.ip_address}${var.network.cidr_suffix}"
+# VM IDENTIFICATION OUTPUTS
+output "vm_ids" {
+  description = "Map of VM names to their VM IDs"
+  value = {
+    for key, vm in proxmox_virtual_environment_vm.k3s_nodes :
+    vm.name => vm.vm_id
   }
 }
 
-# K3S CLUSTER VMS
-resource "proxmox_virtual_environment_vm" "k3s_nodes" {
-  for_each = var.k3s_vms
+output "vm_names" {
+  description = "List of all VM names"
+  value = [
+    for vm in proxmox_virtual_environment_vm.k3s_nodes :
+    vm.name
+  ]
+}
 
-  name        = each.value.name
-  description = "K3s ${each.value.role} node - Managed by Terraform"
-  tags        = ["terraform", "k3s", each.value.role]
-
-  node_name = var.proxmox.node
-  vm_id     = each.value.vm_id
-
-  on_boot = var.vm_defaults.behavior.on_boot
-  started = var.vm_defaults.behavior.started
-
-  stop_on_destroy = var.vm_defaults.behavior.stop_on_destroy
-
-  # CLONE FROM TEMPLATE
-  clone {
-    vm_id = var.proxmox_infrastructure.template_vm_id
-    full  = true
+# NETWORK OUTPUTS
+output "vm_ip_addresses" {
+  description = "Map of VM names to their IP addresses"
+  value = {
+    for key, vm in var.k3s_vms :
+    vm.name => vm.ip_address
   }
+}
 
-  # CPU CONFIGURATION
-  cpu {
-    cores = each.value.cores
-    type  = "host"
+output "vm_network_details" {
+  description = "Complete network configuration for all VMs"
+  value = {
+    for key, vm in proxmox_virtual_environment_vm.k3s_nodes :
+    vm.name => {
+      vm_id      = vm.vm_id
+      ip_address = var.k3s_vms[key].ip_address
+      gateway    = var.network.gateway
+      role       = var.k3s_vms[key].role
+    }
   }
+}
 
-  # MEMORY CONFIGURATION
-  memory {
-    dedicated = each.value.memory
-  }
+# ROLE-BASED OUTPUTS
+output "control_plane_ips" {
+  description = "IP addresses of control plane nodes"
+  value = [
+    for key, vm in var.k3s_vms :
+    vm.ip_address if vm.role == "control"
+  ]
+}
 
-  # QEMU GUEST AGENT
-  agent {
-    enabled = var.vm_defaults.qemu_agent.enabled
-    timeout = var.vm_defaults.qemu_agent.timeout
-  }
+output "worker_node_ips" {
+  description = "IP addresses of worker nodes"
+  value = [
+    for key, vm in var.k3s_vms :
+    vm.ip_address if vm.role == "worker"
+  ]
+}
 
-  # DISK CONFIGURATION
-  disk {
-    datastore_id = var.proxmox_infrastructure.storage_pool
-    interface    = var.vm_defaults.disk_interface
-    size         = var.vm_defaults.disk_size
-    file_format  = "raw"
-  }
-
-  # NETWORK CONFIGURATION
-  network_device {
-    bridge = var.proxmox_infrastructure.network_bridge
-  }
-
-  # CLOUD-INIT CONFIGURATION
-  initialization {
-    datastore_id = var.proxmox_infrastructure.storage_pool
-
-    ip_config {
-      ipv4 {
-        address = local.vm_ip_configs[each.key]
-        gateway = var.network.gateway
+# ANSIBLE INVENTORY OUTPUTS
+output "ansible_inventory_json" {
+  description = "Ansible inventory in JSON format"
+  sensitive   = true
+  value = jsonencode({
+    k3s_control = {
+      hosts = {
+        for key, vm in var.k3s_vms :
+        vm.name => {
+          ansible_host = vm.ip_address
+          ansible_user = var.vm_cloudinit.username
+        } if vm.role == "control"
       }
     }
-
-    user_account {
-      username = var.vm_cloudinit.username
-      password = var.vm_cloudinit.password
-      keys     = [var.vm_cloudinit.ssh_public_key]
+    k3s_workers = {
+      hosts = {
+        for key, vm in var.k3s_vms :
+        vm.name => {
+          ansible_host = vm.ip_address
+          ansible_user = var.vm_cloudinit.username
+        } if vm.role == "worker"
+      }
     }
-  }
+  })
+}
 
-  # LIFECYCLE MANAGEMENT
-  lifecycle {
-    ignore_changes = [
-      # Ignore changes to these attributes to prevent unnecessary updates
-      started,
-    ]
+output "ansible_inventory_ini" {
+  description = "Ansible inventory in INI format"
+  sensitive   = true
+  value       = <<-EOT
+[k3s_control]
+%{for key, vm in var.k3s_vms~}
+%{if vm.role == "control"~}
+${vm.name} ansible_host=${vm.ip_address}
+%{endif~}
+%{endfor~}
+
+[k3s_workers]
+%{for key, vm in var.k3s_vms~}
+%{if vm.role == "worker"~}
+${vm.name} ansible_host=${vm.ip_address}
+%{endif~}
+%{endfor~}
+
+[k3s:children]
+k3s_control
+k3s_workers
+
+[k3s:vars]
+ansible_connection=ssh
+ansible_python_interpreter='/usr/bin/python3'
+ansible_user=${var.vm_cloudinit.username}
+ansible_password=${var.vm_cloudinit.password}
+EOT
+}
+
+# CONFIGURATION SUMMARY
+output "cluster_summary" {
+  description = "High-level cluster configuration summary"
+  value = {
+    total_vms       = length(var.k3s_vms)
+    control_nodes   = length([for vm in var.k3s_vms : vm if vm.role == "control"])
+    worker_nodes    = length([for vm in var.k3s_vms : vm if vm.role == "worker"])
+    network_gateway = var.network.gateway
+    storage_pool    = var.proxmox_infrastructure.storage_pool
+    template_id     = var.proxmox_infrastructure.template_vm_id
   }
 }
 
+# VM RESOURCE DETAILS
+output "vm_mac_addresses" {
+  description = "MAC addresses of VM network interfaces"
+  value = {
+    for key, vm in proxmox_virtual_environment_vm.k3s_nodes :
+    vm.name => vm.mac_addresses
+  }
+}
+
+output "vm_ipv4_addresses" {
+  description = "IPv4 addresses reported by QEMU agent"
+  value = {
+    for key, vm in proxmox_virtual_environment_vm.k3s_nodes :
+    vm.name => vm.ipv4_addresses
+  }
+  depends_on = [
+    proxmox_virtual_environment_vm.k3s_nodes
+  ]
+}

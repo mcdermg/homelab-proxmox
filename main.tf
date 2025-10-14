@@ -84,4 +84,3 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
     ]
   }
 }
-
