@@ -1,0 +1,456 @@
+# Terraform Proxmox K3s Cluster
+
+Terraform configuration for provisioning virtual machines on Proxmox VE to host a K3s Kubernetes cluster. This repository manages VM infrastructure, while K3s installation is handled by Ansible.
+
+## Overview
+
+This project creates and manages VMs for a **K3s High Availability cluster** with embedded etcd:
+
+**Terraform-managed VMs:**
+- 2 K3s control plane VMs (2 cores, 4GB RAM each)
+- 2 K3s worker VMs (2 cores, 2GB RAM each)
+
+**Additional nodes (managed via Ansible):**
+- 1 Raspberry Pi control plane node (for HA quorum - 3 nodes required)
+- 1 Raspberry Pi worker node
+
+**Total cluster:** 3 control plane nodes + 3 worker nodes (HA configuration)
+
+All VMs use IP addresses that match their VM IDs in the last octet (e.g., VM 205 → 192.168.1.205).
+
+## Network Architecture
+
+- **ISP Network**: 192.168.0.0/24
+  - MikroTik WAN: 192.168.0.98
+- **Lab Network**: 192.168.1.0/24 (via MikroTik gateway)
+  - Gateway: 192.168.1.1
+  - Proxmox: 192.168.1.250
+  - K3s Control VMs: 192.168.1.205-206
+  - K3s Worker VMs: 192.168.1.207-208
+  - K3s Pi Control: 192.168.1.209 (physical)
+  - K3s Pi Worker: 192.168.1.210 (physical)
+  - Physical devices: 192.168.1.249-253
+
+## Prerequisites
+
+### Required Software
+
+- [Terraform](https://www.terraform.io/downloads) ~> 1.13
+- SSH client with agent running
+- Access to Proxmox VE server (v7.0+)
+
+### Proxmox Setup
+
+1. **Template VM**: Create a cloud-init enabled template (ID: 9000)
+   - Debian 12 or Ubuntu 22.04 recommended
+   - QEMU guest agent installed
+   - Cloud-init configured
+   - SSH server enabled
+
+2. **API Token**: Create a Proxmox API token
+   ```bash
+   # On Proxmox host
+   pveum role add TerraformProv -privs "VM.Allocate VM.Clone VM.Config.Disk VM.Config.CPU VM.Config.Memory VM.Config.Network VM.Config.Options VM.Monitor VM.Audit Datastore.AllocateSpace Datastore.Audit"
+   pveum user token add terraform-prov@pve terraform-token --privsep=0
+   ```
+   Save the token secret - you'll need it for `terraform.tfvars`
+
+3. **Network**: Ensure bridge `vmbr0` exists and is configured
+
+## Quick Start
+
+### 1. Clone Repository
+
+```bash
+git clone <your-repo-url>
+cd terraform-proxmox
+```
+
+### 2. Configure Variables
+
+```bash
+cp terraform.tfvars.example terraform.tfvars
+```
+
+Edit `terraform.tfvars` and set:
+- `proxmox.endpoint`: Your Proxmox endpoint (e.g., "https://192.168.1.250:8006")
+- `proxmox.node`: Your Proxmox node name (e.g., "msi-proxmox")
+- `proxmox_auth.api_token`: Your API token from prerequisite step 2
+- `vm_cloudinit.ssh_public_key`: Your SSH public key for VM access
+- `vm_cloudinit.password`: Password for VM user account
+- Adjust VM specifications and IP addresses in `k3s_vms` as needed
+
+### 3. Initialize Terraform
+
+```bash
+terraform init
+```
+
+### 4. Review Plan
+
+```bash
+terraform plan
+```
+
+Review the planned changes carefully. Should show:
+- 4 VMs to be created
+- No existing resources to be modified/destroyed
+
+### 5. Apply Configuration
+
+```bash
+terraform apply
+```
+
+Type `yes` when prompted. VMs will be created and started.
+
+### 6. Verify VMs
+
+```bash
+# List created VMs
+terraform output vm_names
+
+# Show IP addresses
+terraform output vm_ip_addresses
+
+# Test SSH access
+ssh admin_test@192.168.1.205
+```
+
+### 7. Export Ansible Inventory (Optional)
+
+```bash
+# Generate Ansible inventory file
+terraform output -raw ansible_inventory_ini > ../ansible/hosts.ini
+```
+
+## Configuration
+
+### VM Specifications
+
+Modify `k3s_vms` in `terraform.tfvars`:
+
+```hcl
+k3s_vms = {
+  control_01 = {
+    vm_id      = 205
+    name       = "k3s-control-01"
+    cores      = 2
+    memory     = 4096
+    ip_address = "192.168.1.205"
+    role       = "control"
+  }
+  control_02 = {
+    vm_id      = 206
+    name       = "k3s-control-02"
+    cores      = 2
+    memory     = 4096
+    ip_address = "192.168.1.206"
+    role       = "control"
+  }
+  # ... workers ...
+}
+```
+
+**IP Addressing Convention:**
+VMs use IP addresses that match their VM ID in the last octet:
+- VM 205 → 192.168.1.205
+- VM 206 → 192.168.1.206
+- VM 207 → 192.168.1.207
+- VM 208 → 192.168.1.208
+
+### Proxmox Connection
+
+Modify `proxmox` and `proxmox_auth` objects in `terraform.tfvars`:
+
+```hcl
+proxmox = {
+  endpoint = "https://192.168.1.250:8006"
+  node     = "msi-proxmox"
+  insecure = true
+  ssh_user = "root"
+}
+
+proxmox_auth = {
+  api_token = "terraform-prov@pve!terraform-token=xxx"
+  # ... other auth settings
+}
+```
+
+### Authentication Methods
+
+**API Token (Default)**
+- More secure, recommended for production
+- Set `proxmox_auth.api_token` in terraform.tfvars
+- Keep `api_token` line uncommented in versions.tf
+
+**Username/Password (Alternative)**
+- Useful for testing
+- Comment out `api_token` line in versions.tf
+- Uncomment `username` and `password` lines
+- Set values in `proxmox_auth` object
+
+### Network Configuration
+
+VMs are placed on the lab network via MikroTik:
+- Network: 192.168.1.0/24
+- Gateway: 192.168.1.1 (MikroTik)
+- K3s VMs: 192.168.1.205-208
+- K3s Pis: 192.168.1.209-210 (managed by Ansible)
+
+To change network settings, modify the `network` object in terraform.tfvars:
+
+```hcl
+network = {
+  gateway     = "192.168.1.1"
+  cidr_suffix = "/24"
+}
+```
+
+And update IP addresses in `k3s_vms` map following the VM ID convention.
+
+## Outputs
+
+### Available Outputs
+
+```bash
+# VM identification
+terraform output vm_ids
+terraform output vm_names
+
+# Network information
+terraform output vm_ip_addresses
+terraform output control_plane_ips
+terraform output worker_node_ips
+
+# Ansible integration
+terraform output -raw ansible_inventory_ini
+terraform output -json ansible_inventory_json
+
+# Cluster summary
+terraform output cluster_summary
+```
+
+### Using Outputs with Ansible
+
+```bash
+# Export static inventory
+terraform output -raw ansible_inventory_ini > ../ansible/hosts.ini
+
+# Or use as dynamic inventory
+terraform output -json ansible_inventory_json | jq '.' > ../ansible/inventory/terraform.json
+```
+
+## Management
+
+### Adding VMs
+
+1. Add entry to `k3s_vms` in terraform.tfvars
+2. Run `terraform apply`
+3. New VM will be created without affecting existing ones
+
+### Removing VMs
+
+1. Remove entry from `k3s_vms` in terraform.tfvars
+2. Run `terraform apply`
+3. VM will be destroyed (backup data first!)
+
+### Updating VM Specs
+
+1. Modify `cores`, `memory` in terraform.tfvars
+2. Run `terraform apply`
+3. VM will be updated (may require restart)
+
+### Destroying Infrastructure
+
+```bash
+# Destroy all VMs
+terraform destroy
+
+# Destroy specific VM
+terraform destroy -target=proxmox_virtual_environment_vm.k3s_nodes[\"worker_03\"]
+```
+
+## Troubleshooting
+
+### VM Creation Timeouts
+
+If VMs timeout during creation:
+- Verify QEMU guest agent is installed in template
+- Increase `qemu_agent_timeout` in terraform.tfvars
+- Check Proxmox task logs for errors
+
+### Authentication Failures
+
+If Terraform cannot connect to Proxmox:
+- Verify `proxmox_endpoint` is correct
+- Test API token: `pveum user token list terraform-prov@pve`
+- Check token has correct permissions
+- Verify SSL certificate if not using `insecure = true`
+
+### SSH Connection Issues
+
+If cannot SSH to VMs:
+- Verify cloud-init completed: `sudo cloud-init status` on VM
+- Check SSH key was injected correctly
+- Verify firewall rules allow SSH (port 22)
+- Check VM has correct IP address: `ip addr show`
+
+### Template Issues
+
+If cloning fails:
+- Verify template VM 9000 exists: `qm list | grep 9000`
+- Check template is actually a template: `qm config 9000 | grep template`
+- Ensure template has cloud-init drive configured
+
+## Project Structure
+
+```
+.
+├── versions.tf                 # Terraform & provider configuration
+├── variables.tf                # Variable definitions
+├── main.tf                     # VM resources
+├── outputs.tf                  # Output definitions
+├── terraform.tfvars.example    # Example configuration
+├── .gitignore                  # Git ignore patterns
+├── README.md                   # This file
+└── claude.md                   # AI assistant context
+```
+
+## Next Steps
+
+After VMs are created:
+
+1. **Install K3s HA Cluster**: Use Ansible to install K3s with HA
+   ```bash
+   cd ../ansible
+   # Install on first control node with --cluster-init
+   ansible-playbook k3s-ha-install.yml --limit k3s-control-01
+   
+   # Join additional control nodes and workers
+   ansible-playbook k3s-ha-install.yml
+   ```
+
+2. **Configure kubectl**: Get kubeconfig from any control plane node
+   ```bash
+   scp admin_test@192.168.1.205:/etc/rancher/k3s/k3s.yaml ~/.kube/config
+   sed -i 's/127.0.0.1/192.168.1.205/g' ~/.kube/config
+   kubectl get nodes
+   # Should show 3 control-plane nodes + 3 workers
+   ```
+
+3. **Deploy Applications**: Use ArgoCD or kubectl to deploy workloads
+
+## K3s High Availability
+
+This setup implements K3s HA with embedded etcd as per [K3s HA documentation](https://docs.k3s.io/datastore/ha-embedded).
+
+### HA Benefits
+
+- **Fault Tolerance**: Cluster survives 1 control plane node failure
+- **No External Database**: Embedded etcd eliminates external dependency
+- **Automatic Failover**: K3s handles control plane failover automatically
+- **Load Distribution**: API requests distributed across control nodes
+
+### HA Requirements
+
+✅ **Minimum 3 control plane nodes** (for etcd quorum)  
+✅ **Odd number of control nodes** (3, 5, 7)  
+✅ **Network connectivity** between all control nodes  
+✅ **Ports open**: 6443 (API), 2379-2380 (etcd)
+
+### Verifying HA Status
+
+```bash
+# Check node status
+kubectl get nodes
+# Should show 3 nodes with 'control-plane,master' role
+
+# Check etcd cluster health
+kubectl -n kube-system exec -it <etcd-pod> -- etcdctl \
+  --endpoints=https://192.168.1.205:2379,https://192.168.1.206:2379,https://192.168.1.209:2379 \
+  --cacert=/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt \
+  --cert=/var/lib/rancher/k3s/server/tls/etcd/server-client.crt \
+  --key=/var/lib/rancher/k3s/server/tls/etcd/server-client.key \
+  endpoint health
+
+# Test failover
+# Stop one control node and verify cluster remains functional
+sudo systemctl stop k3s
+kubectl get nodes  # From another control node
+```
+
+### Load Balancer (Optional)
+
+For production, consider adding a load balancer in front of control plane:
+- Use HAProxy, Nginx, or cloud load balancer
+- Point to all 3 control nodes (192.168.1.205, 206, 209)
+- Configure health checks on port 6443
+- Update kubeconfig to use load balancer endpoint
+
+## Integration
+
+### With Ansible
+
+Export inventory after VM creation:
+```bash
+terraform output -raw ansible_inventory_ini > ../ansible/hosts.ini
+cd ../ansible
+ansible-playbook -i hosts.ini k3s-install.yml
+```
+
+### With ArgoCD
+
+After K3s is installed:
+```bash
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+```
+
+### With GitHub Actions
+
+Example workflow:
+```yaml
+name: Terraform Deploy
+on: [push]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: hashicorp/setup-terraform@v2
+      - run: terraform init
+      - run: terraform plan
+      - run: terraform apply -auto-approve
+```
+
+## Security Considerations
+
+- ✅ Use API tokens instead of passwords
+- ✅ Never commit `terraform.tfvars` to version control
+- ✅ Use strong passwords for VM user accounts
+- ✅ Secure state files (contain sensitive data)
+- ✅ Regularly rotate API tokens
+- ✅ Use SSH keys instead of passwords for VM access
+- ✅ Implement Proxmox firewall rules for API access
+
+## Contributing
+
+When making changes:
+1. Follow DRY principles (no hardcoded values)
+2. Use variables for all configurable values
+3. Update documentation for new features
+4. Test with `terraform plan` before committing
+5. Keep comments concise and clear
+
+## License
+
+[Your License Here]
+
+## Support
+
+For issues and questions:
+- Check `claude.md` for detailed technical information
+- Review Proxmox and Terraform documentation
+- Check provider issues: https://github.com/bpg/terraform-provider-proxmox/issues
+
