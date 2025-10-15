@@ -113,31 +113,31 @@ variable "k3s_vms" {
       name       = "k3s-main-tf-01"
       cores      = 2
       memory     = 4096
-      ip_address = "192.168.1.100"
+      ip_address = "192.168.1.210"
+      role       = "control"
+    }
+    control_02 = {
+      vm_id      = 211
+      name       = "k3s-main-tf-02"
+      cores      = 2
+      memory     = 4096
+      ip_address = "192.168.1.211"
       role       = "control"
     }
     worker_01 = {
-      vm_id      = 211
+      vm_id      = 215
       name       = "k3s-worker-tf-01"
       cores      = 2
       memory     = 2048
-      ip_address = "192.168.1.101"
+      ip_address = "192.168.1.215"
       role       = "worker"
     }
     worker_02 = {
-      vm_id      = 212
+      vm_id      = 216
       name       = "k3s-worker-tf-02"
       cores      = 2
       memory     = 2048
-      ip_address = "192.168.1.102"
-      role       = "worker"
-    }
-    worker_03 = {
-      vm_id      = 213
-      name       = "k3s-worker-tf-03"
-      cores      = 2
-      memory     = 2048
-      ip_address = "192.168.1.103"
+      ip_address = "192.168.1.216"
       role       = "worker"
     }
   }

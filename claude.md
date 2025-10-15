@@ -10,14 +10,14 @@ This is a Terraform project for managing virtual machines on a Proxmox VE server
 
 **High Availability Setup with Embedded Etcd:**
 - 3 control plane nodes (minimum for HA quorum)
-  - 2 VMs on Proxmox (managed by Terraform)
-  - 1 Raspberry Pi (managed by Ansible)
+  - 2 VMs on Proxmox (IaC managed by Terraform, config management by Ansible)
+  - 1 Raspberry Pi 4 at 192.168.1.252 (config management by Ansible)
 - 3 worker nodes
-  - 2 VMs on Proxmox (managed by Terraform)
-  - 1 Raspberry Pi (managed by Ansible)
+  - 2 VMs on Proxmox (IaC managed by Terraform, config management by Ansible)
+  - 1 Raspberry Pi 3 at 192.168.1.251 (config management by Ansible)
 
 **Why 3 Control Nodes?**
-K3s embedded etcd requires an odd number of nodes (3, 5, 7) for quorum. With 3 nodes:
+K3s embedded etcd requires an odd number of control nodes (3, 5, 7) for quorum. With 3 nodes:
 - Cluster tolerates 1 control plane failure
 - Etcd maintains quorum with 2/3 nodes
 - See: https://docs.k3s.io/datastore/ha-embedded
@@ -25,39 +25,34 @@ K3s embedded etcd requires an odd number of nodes (3, 5, 7) for quorum. With 3 n
 ### Node Distribution
 
 **Terraform-Managed (Proxmox VMs):**
-- `k3s-control-01` (192.168.1.205) - Control plane, VM ID 205
-- `k3s-control-02` (192.168.1.206) - Control plane, VM ID 206
-- `k3s-worker-01` (192.168.1.207) - Worker, VM ID 207
-- `k3s-worker-02` (192.168.1.208) - Worker, VM ID 208
+- `k3s-main-tf-01` (192.168.1.210) - Control plane, VM ID 210
+- `k3s-main-tf-02` (192.168.1.211) - Control plane, VM ID 211
+- `k3s-worker-tf-01` (192.168.1.215) - Worker, VM ID 215
+- `k3s-worker-tf-02` (192.168.1.216) - Worker, VM ID 216
+- `k3s-worker-tf-03` (192.168.1.217) - Worker, VM ID 217
 
 **Ansible-Managed (Physical Raspberry Pis):**
-- `k3s-control-pi` (192.168.1.209) - Control plane, Pi 4
-- `k3s-worker-pi` (192.168.1.210) - Worker, Pi 3/4
+- Pi 4 (192.168.1.252) - Control plane [HA quorum]
+- Pi 3 (192.168.1.251) - Worker
 
 ### IP Addressing Scheme
 
 **Convention:** Last octet matches VM ID
-- VM 205 → 192.168.1.205
-- VM 206 → 192.168.1.206
-- VM 207 → 192.168.1.207
-- VM 208 → 192.168.1.208
-- Pi nodes use sequential IPs: 209, 210
+Control nodes staring at VM ID 210 so last IP octect xxx.xxx.x.210 and going to xxx.xxx.x.215 althoug we only use two for now with room for future expansion in Proxmox VM ID and IP range as required.
+
+The same setup for the worked noes starting at xxx.xxx.x.215 and iterating upas requiored with only 2 in place for now.
 
 ## Network Architecture
 
 ### Network Topology
 - **ISP Network**: `192.168.0.0/24` (Gateway: `192.168.0.1`)
-  - MikroTik WAN interface: `192.168.0.98`
-  - RPi Zero (ISP monitoring): `192.168.0.62`
 - **Lab Network**: `192.168.1.0/24` (Gateway: `192.168.1.1` via MikroTik)
   - Proxmox Host: `192.168.1.250:8006`
-  - K3s Control VMs: `192.168.1.205-206`
-  - K3s Worker VMs: `192.168.1.207-208`
-  - K3s Pi Control: `192.168.1.209` (physical)
-  - K3s Pi Worker: `192.168.1.210` (physical)
+  - K3s Control VMs: `192.168.1.210-214` (note not all used initially and room for future expansion is in place)
+  - K3s Worker VMs: `192.168.1.214-220` (note not all used initially and room for future expansion is in place)
   - Container (ISP Monitor): `192.168.1.249`
-  - Pi 3: `192.168.1.251`
-  - Pi 4: `192.168.1.252`
+  - Pi 3 (K3s Worker): `192.168.1.251`
+  - Pi 4 (K3s Control): `192.168.1.252`
   - TP-Link Switch: `192.168.1.253`
 
 ### Cluster Network Architecture
@@ -69,13 +64,11 @@ ISP Router (192.168.0.1)
             └── Lab Network (192.168.1.0/24)
                     │
                     ├── Proxmox Host (192.168.1.250)
-                    │   ├── k3s-control-01 (192.168.1.205) - Control VM
-                    │   ├── k3s-control-02 (192.168.1.206) - Control VM
-                    │   ├── k3s-worker-01 (192.168.1.207) - Worker VM
-                    │   └── k3s-worker-02 (192.168.1.208) - Worker VM
-                    │
-                    ├── k3s-control-pi (192.168.1.209) - Control Pi [HA quorum]
-                    ├── k3s-worker-pi (192.168.1.210) - Worker Pi
+                    │   ├── k3s-main-tf-01 (192.168.1.210) - Control VM
+                    │   ├── k3s-main-tf-02 (192.168.1.211) - Control VM
+                    │   ├── k3s-worker-tf-01 (192.168.1.215) - Worker VM
+                    │   ├── k3s-worker-tf-02 (192.168.1.216) - Worker VM
+                    │   └── k3s-worker-tf-03 (192.168.1.217) - Worker VM
                     ├── Container (192.168.1.249) - ISP Monitor
                     ├── Pi 3 (192.168.1.251)
                     ├── Pi 4 (192.168.1.252)
@@ -86,9 +79,8 @@ ISP Router (192.168.0.1)
 - VMs are on the **lab network** (192.168.1.x), not ISP network
 - MikroTik provides routing between networks
 - K3s cluster is fully contained within lab network
-- IP range 192.168.1.205-210 reserved for K3s cluster
+- IP range 192.168.1.210-220 reserved for K3s cluster VMs
 - Static leases at 192.168.1.249-253 for infrastructure devices
-- **HA Configuration**: 3 control nodes ensure cluster survives 1 control node failure
 
 ## File Structure
 
@@ -350,12 +342,12 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
 ```hcl
 k3s_vms = {
   # ... existing VMs ...
-  worker_03 = {
-    vm_id      = 209
-    name       = "k3s-worker-03"
+  worker_04 = {
+    vm_id      = 214
+    name       = "k3s-worker-tf-04"
     cores      = 2
     memory     = 2048
-    ip_address = "192.168.1.211"  # Pi already at .209-210
+    ip_address = "192.168.1.214"
     role       = "worker"
   }
 }
@@ -369,11 +361,11 @@ k3s_vms = {
 ```hcl
 k3s_vms = {
   control_01 = {
-    vm_id      = 205
-    name       = "k3s-control-01"
+    vm_id      = 210
+    name       = "k3s-main-tf-01"
     cores      = 4        # Changed from 2
     memory     = 8192     # Changed from 4096
-    ip_address = "192.168.1.205"
+    ip_address = "192.168.1.210"
     role       = "control"
   }
 }
@@ -394,8 +386,8 @@ network = {
 k3s_vms = {
   control_01 = {
     # ... other values ...
-    ip_address = "192.168.1.220"  # New IP (following VM ID convention)
-    vm_id      = 220  # Must update both
+    ip_address = "192.168.1.215"  # New IP (following VM ID convention)
+    vm_id      = 215  # Must update both
   }
 }
 ```
@@ -408,16 +400,15 @@ k3s_vms = {
 When adding VMs, follow the convention: **last octet = VM ID**
 
 ```hcl
-vm_id = 205  →  ip_address = "192.168.1.205"
-vm_id = 206  →  ip_address = "192.168.1.206"
+vm_id = 210  →  ip_address = "192.168.1.210"
+vm_id = 211  →  ip_address = "192.168.1.211"
 vm_id = 215  →  ip_address = "192.168.1.215"
 ```
 
 This makes infrastructure predictable and easier to manage.
 
 **Reserved Ranges:**
-- 192.168.1.205-208: K3s VMs (Terraform)
-- 192.168.1.209-210: K3s Pis (Ansible)
+- 192.168.1.210-213: K3s VMs (Terraform)
 - 192.168.1.249-253: Infrastructure devices
 
 ### Changing Proxmox Connection
@@ -469,6 +460,9 @@ vm_defaults = {
 
 ## Integration Points
 
+This is yet to be implinmented and will be part fo future work. It may not take the form outlined below so please treat this with a grain of salt as it may not be in place or implimented in this manner.
+
+
 ### With Ansible
 
 **Export inventory:**
@@ -487,13 +481,12 @@ terraform output -raw ansible_inventory_ini > ansible/inventory/hosts.ini
 
 ### With K3s Installation
 
-**Workflow for HA Setup:**
-1. Terraform provisions 4 VMs (2 control, 2 worker)
+**Workflow for K3s Setup:**
+1. Terraform provisions 4 VMs (1 control, 3 worker)
 2. Wait for VMs to be fully booted
-3. Export inventory for Ansible (includes physical Pis)
-4. Ansible installs K3s on first control node with `--cluster-init`
-5. Ansible joins second control VM and Pi control node
-6. Ansible joins worker VMs and Pi worker
+3. Export inventory for Ansible
+4. Ansible installs K3s on control node
+5. Ansible joins worker VMs to cluster
 
 **HA Control Plane Installation Example:**
 
@@ -504,71 +497,41 @@ terraform apply -auto-approve
 # Export inventory
 terraform output -raw ansible_inventory_ini > ../ansible/hosts.ini
 
-# Manually add Pi nodes to inventory
-cat >> ../ansible/hosts.ini << EOF
-
-[k3s_control]
-k3s-control-pi ansible_host=192.168.1.209
-
-[k3s_workers]
-k3s-worker-pi ansible_host=192.168.1.210
-EOF
-
-# Install K3s with HA
+# Install K3s
 cd ../ansible
-ansible-playbook k3s-ha-install.yml
+ansible-playbook k3s-install.yml
 ```
 
 **K3s Installation Steps (via Ansible):**
 
-*First Control Node (k3s-control-01):*
+*Control Node (k3s-main-tf-01):*
 ```bash
 curl -sfL https://get.k3s.io | sh -s - server \
-  --cluster-init \
-  --tls-san=192.168.1.205 \
-  --tls-san=192.168.1.206 \
-  --tls-san=192.168.1.209
-```
-
-*Additional Control Nodes:*
-```bash
-curl -sfL https://get.k3s.io | K3S_TOKEN=xxx sh -s - server \
-  --server https://192.168.1.205:6443
+  --tls-san=192.168.1.210
 ```
 
 *Worker Nodes:*
 ```bash
-curl -sfL https://get.k3s.io | K3S_URL=https://192.168.1.205:6443 \
+curl -sfL https://get.k3s.io | K3S_URL=https://192.168.1.210:6443 \
   K3S_TOKEN=xxx sh -s - agent
 ```
 
-**Verifying HA Cluster:**
+**Verifying Cluster:**
 ```bash
-# From any control node
+# From control node
 kubectl get nodes
-# Should show 3 control-plane nodes + 3 worker nodes
-
-# Check etcd members
-kubectl -n kube-system exec -it etcd-k3s-control-01 -- etcdctl member list
+# Should show 1 control-plane node + 3 worker nodes
 ```
 
 ### With MikroTik Network
+
+**A completly seperate repository manages all Miktrotick configuration via IaC and Terraform.
 
 - VMs are on the **lab network** (192.168.1.x), not ISP network
 - MikroTik (192.168.1.1) provides routing and gateway
 - K3s services can be exposed via MikroTik port forwards
 - Consider adding MikroTik firewall rules for K3s API server (port 6443)
 - Lab network is isolated from ISP network via MikroTik
-
-**Example MikroTik firewall rule for K3s API:**
-```routeros
-/ip firewall filter add chain=forward \
-  action=accept \
-  protocol=tcp \
-  dst-address=192.168.1.100 \
-  dst-port=6443 \
-  comment="Allow K3s API access"
-```
 
 ## Anti-Patterns to Avoid
 
@@ -584,7 +547,6 @@ kubectl -n kube-system exec -it etcd-k3s-control-01 -- etcdctl member list
 ## Terraform Best Practices
 
 ### State Management
-- Use remote state for production (GCS, S3, Terraform Cloud)
 - Never commit `terraform.tfvars` (contains credentials)
 - Keep state file secure (contains IP addresses, VM IDs)
 - Use state locking to prevent concurrent modifications
@@ -599,10 +561,7 @@ kubectl -n kube-system exec -it etcd-k3s-control-01 -- etcdctl member list
 7. Commit `.tf` files (NOT `.tfvars`) to git
 
 ### Provider Version
-- Currently using `bpg/proxmox` version `0.71.0`
-- Pin versions in production
-- Test updates in non-production first
-- Review changelog before updating
+- Currently using `bpg/proxmox` version but this may change and update in future.
 
 ### Security Considerations
 
@@ -643,14 +602,6 @@ kubectl -n kube-system exec -it etcd-k3s-control-01 -- etcdctl member list
 - Template base + expansion = total
 - Use `17` for 10GB template + 7GB expansion
 
-### Debugging
-
-**Enable provider logging:**
-```bash
-export TF_LOG=DEBUG
-export TF_LOG_PATH=./terraform.log
-terraform apply
-```
 
 **Check Proxmox task logs:**
 - Web UI: Datacenter → Node → Task History
@@ -663,15 +614,6 @@ sudo cloud-init status
 sudo cloud-init query --all
 ```
 
-## User Preferences
-
-- Senior DevOps engineer with GCP/GKE background
-- Extensive Terraform and Ansible experience
-- Prefers clean, maintainable IaC
-- Values DRY principles and operational simplicity
-- Technical enough to understand implementation details
-- Familiar with GitHub Actions for CI/CD
-
 ## When Making Changes
 
 1. Always check if a value should be a variable
@@ -679,8 +621,8 @@ sudo cloud-init query --all
 3. Always maintain DRY principles
 4. Always preserve resource dependencies
 5. Always keep comments simple and clean
-6. Test changes with `terraform plan` before applying
-7. Consider impact on Ansible integration
+6. Test changes with `terraform plan` and NEVER run apply
+7. Consider impact on Ansible integration if it is used
 8. Document breaking changes in commit messages
 
 ## Proxmox Provider Resources Reference
@@ -699,18 +641,6 @@ sudo cloud-init query --all
 - `node_name`: Proxmox node to create VM on
 - `started`: Power state after creation
 - `on_boot`: Auto-start on Proxmox boot
-
-## Future Enhancements
-
-Potential improvements to consider:
-- Add VM backup configuration
-- Implement VM snapshots before changes
-- Add monitoring integration (Prometheus)
-- Create separate storage for K3s persistent volumes
-- Implement HA configuration for control plane
-- Add resource pools for organization
-- Implement VM tagging strategy
-- Add cost tracking/optimization
 
 ## Additional Resources
 

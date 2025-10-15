@@ -11,12 +11,12 @@ This project creates and manages VMs for a **K3s High Availability cluster** wit
 - 2 K3s worker VMs (2 cores, 2GB RAM each)
 
 **Additional nodes (managed via Ansible):**
-- 1 Raspberry Pi control plane node (for HA quorum - 3 nodes required)
-- 1 Raspberry Pi worker node
+- 1 Raspberry Pi 4 control plane node (for HA quorum - 3 nodes required)
+- 1 Raspberry Pi 3 worker node
 
 **Total cluster:** 3 control plane nodes + 3 worker nodes (HA configuration)
 
-All VMs use IP addresses that match their VM IDs in the last octet (e.g., VM 205 → 192.168.1.205).
+All VMs use IP addresses that match their VM IDs in the last octet (e.g., VM 210 → 192.168.1.210).
 
 ## Network Architecture
 
@@ -24,12 +24,11 @@ All VMs use IP addresses that match their VM IDs in the last octet (e.g., VM 205
   - MikroTik WAN: 192.168.0.98
 - **Lab Network**: 192.168.1.0/24 (via MikroTik gateway)
   - Gateway: 192.168.1.1
-  - Proxmox: 192.168.1.250
-  - K3s Control VMs: 192.168.1.205-206
-  - K3s Worker VMs: 192.168.1.207-208
-  - K3s Pi Control: 192.168.1.209 (physical)
-  - K3s Pi Worker: 192.168.1.210 (physical)
-  - Physical devices: 192.168.1.249-253
+  - Proxmox Host: 192.168.1.250
+  - K3s Control VMs: 192.168.1.210-214 (room for expansion)
+  - K3s Worker VMs: 192.168.1.215-220 (room for expansion)
+  - Pi 3 Worker: 192.168.1.251
+  - Pi 4 Control: 192.168.1.252
 
 ## Prerequisites
 
@@ -68,43 +67,26 @@ cd terraform-proxmox
 
 ### 2. Configure Variables
 
-```bash
-cp terraform.tfvars.example terraform.tfvars
-```
-
-Edit `terraform.tfvars` and set:
+Update `terraform.tfvars` and set:
 - `proxmox.endpoint`: Your Proxmox endpoint (e.g., "https://192.168.1.250:8006")
 - `proxmox.node`: Your Proxmox node name (e.g., "msi-proxmox")
 - `proxmox_auth.api_token`: Your API token from prerequisite step 2
 - `vm_cloudinit.ssh_public_key`: Your SSH public key for VM access
 - `vm_cloudinit.password`: Password for VM user account
-- Adjust VM specifications and IP addresses in `k3s_vms` as needed
 
-### 3. Initialize Terraform
+### 3. Terraform
 
 ```bash
 terraform init
-```
-
-### 4. Review Plan
-
-```bash
 terraform plan
-```
-
-Review the planned changes carefully. Should show:
-- 4 VMs to be created
-- No existing resources to be modified/destroyed
-
-### 5. Apply Configuration
-
-```bash
 terraform apply
 ```
 
-Type `yes` when prompted. VMs will be created and started.
+Review the planned changes. They Should show:
+- 4 VMs to be created
+- No existing resources to be modified/destroyed
 
-### 6. Verify VMs
+### 4. Verify VMs
 
 ```bash
 # List created VMs
@@ -113,11 +95,11 @@ terraform output vm_names
 # Show IP addresses
 terraform output vm_ip_addresses
 
-# Test SSH access
-ssh admin_test@192.168.1.205
+# Test SSH access (use first control node IP from your config)
+ssh admin_test@<control-node-ip>
 ```
 
-### 7. Export Ansible Inventory (Optional)
+### 5. Export Ansible Inventory (Optional)
 
 ```bash
 # Generate Ansible inventory file
@@ -133,31 +115,42 @@ Modify `k3s_vms` in `terraform.tfvars`:
 ```hcl
 k3s_vms = {
   control_01 = {
-    vm_id      = 205
-    name       = "k3s-control-01"
+    vm_id      = 210
+    name       = "k3s-main-tf-01"
     cores      = 2
     memory     = 4096
-    ip_address = "192.168.1.205"
+    ip_address = "192.168.1.210"
     role       = "control"
   }
   control_02 = {
-    vm_id      = 206
-    name       = "k3s-control-02"
+    vm_id      = 211
+    name       = "k3s-main-tf-02"
     cores      = 2
     memory     = 4096
-    ip_address = "192.168.1.206"
+    ip_address = "192.168.1.211"
     role       = "control"
   }
-  # ... workers ...
+  worker_01 = {
+    vm_id      = 215
+    name       = "k3s-worker-tf-01"
+    cores      = 2
+    memory     = 2048
+    ip_address = "192.168.1.215"
+    role       = "worker"
+  }
+  worker_02 = {
+    vm_id      = 216
+    name       = "k3s-worker-tf-02"
+    cores      = 2
+    memory     = 2048
+    ip_address = "192.168.1.216"
+    role       = "worker"
+  }
 }
 ```
 
 **IP Addressing Convention:**
-VMs use IP addresses that match their VM ID in the last octet:
-- VM 205 → 192.168.1.205
-- VM 206 → 192.168.1.206
-- VM 207 → 192.168.1.207
-- VM 208 → 192.168.1.208
+VMs use IP addresses that match their VM ID in the last octet. Control nodes start at 210, workers start at 215, with room for expansion.
 
 ### Proxmox Connection
 
@@ -195,8 +188,7 @@ proxmox_auth = {
 VMs are placed on the lab network via MikroTik:
 - Network: 192.168.1.0/24
 - Gateway: 192.168.1.1 (MikroTik)
-- K3s VMs: 192.168.1.205-208
-- K3s Pis: 192.168.1.209-210 (managed by Ansible)
+- K3s VMs use IP ranges 210-214 (control) and 215-220 (workers)
 
 To change network settings, modify the `network` object in terraform.tfvars:
 
@@ -324,19 +316,19 @@ After VMs are created:
 1. **Install K3s HA Cluster**: Use Ansible to install K3s with HA
    ```bash
    cd ../ansible
-   # Install on first control node with --cluster-init
-   ansible-playbook k3s-ha-install.yml --limit k3s-control-01
+   # Install on first VM control node with --cluster-init
+   ansible-playbook k3s-ha-install.yml --limit k3s-main-tf-01
 
-   # Join additional control nodes and workers
+   # Join second VM control + Pi4 control, then all workers
    ansible-playbook k3s-ha-install.yml
    ```
 
 2. **Configure kubectl**: Get kubeconfig from any control plane node
    ```bash
-   scp admin_test@192.168.1.205:/etc/rancher/k3s/k3s.yaml ~/.kube/config
-   sed -i 's/127.0.0.1/192.168.1.205/g' ~/.kube/config
+   scp admin_test@<control-node-ip>:/etc/rancher/k3s/k3s.yaml ~/.kube/config
+   sed -i 's/127.0.0.1/<control-node-ip>/g' ~/.kube/config
    kubectl get nodes
-   # Should show 3 control-plane nodes + 3 workers
+   # Should show 3 control-plane nodes (2 VMs + Pi4) + 3 workers (2 VMs + Pi3)
    ```
 
 3. **Deploy Applications**: Use ArgoCD or kubectl to deploy workloads
@@ -366,9 +358,9 @@ This setup implements K3s HA with embedded etcd as per [K3s HA documentation](ht
 kubectl get nodes
 # Should show 3 nodes with 'control-plane,master' role
 
-# Check etcd cluster health
+# Check etcd cluster health (specify all 3 control node endpoints)
 kubectl -n kube-system exec -it <etcd-pod> -- etcdctl \
-  --endpoints=https://192.168.1.205:2379,https://192.168.1.206:2379,https://192.168.1.209:2379 \
+  --endpoints=https://<control-1-ip>:2379,https://<control-2-ip>:2379,https://<pi4-ip>:2379 \
   --cacert=/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt \
   --cert=/var/lib/rancher/k3s/server/tls/etcd/server-client.crt \
   --key=/var/lib/rancher/k3s/server/tls/etcd/server-client.key \
@@ -379,60 +371,15 @@ kubectl -n kube-system exec -it <etcd-pod> -- etcdctl \
 sudo systemctl stop k3s
 kubectl get nodes  # From another control node
 ```
-
-### Load Balancer (Optional)
-
-For production, consider adding a load balancer in front of control plane:
-- Use HAProxy, Nginx, or cloud load balancer
-- Point to all 3 control nodes (192.168.1.205, 206, 209)
-- Configure health checks on port 6443
-- Update kubeconfig to use load balancer endpoint
-
-## Integration
-
-### With Ansible
-
-Export inventory after VM creation:
-```bash
-terraform output -raw ansible_inventory_ini > ../ansible/hosts.ini
-cd ../ansible
-ansible-playbook -i hosts.ini k3s-install.yml
-```
-
-### With ArgoCD
-
-After K3s is installed:
-```bash
-kubectl create namespace argocd
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-```
-
-### With GitHub Actions
-
-Example workflow:
-```yaml
-name: Terraform Deploy
-on: [push]
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: hashicorp/setup-terraform@v2
-      - run: terraform init
-      - run: terraform plan
-      - run: terraform apply -auto-approve
-```
-
 ## Security Considerations
 
-- ✅ Use API tokens instead of passwords
-- ✅ Never commit `terraform.tfvars` to version control
-- ✅ Use strong passwords for VM user accounts
-- ✅ Secure state files (contain sensitive data)
-- ✅ Regularly rotate API tokens
-- ✅ Use SSH keys instead of passwords for VM access
-- ✅ Implement Proxmox firewall rules for API access
+- Use API tokens instead of passwords
+- Never commit `terraform.tfvars` to version control
+- Use strong passwords for VM user accounts
+- Secure state files (contain sensitive data)
+- Regularly rotate API tokens
+- Use SSH keys instead of passwords for VM access
+- Implement Proxmox firewall rules for API access
 
 ## Contributing
 
@@ -450,7 +397,6 @@ When making changes:
 ## Support
 
 For issues and questions:
-- Check `claude.md` for detailed technical information
 - Review Proxmox and Terraform documentation
 - Check provider issues: https://github.com/bpg/terraform-provider-proxmox/issues
 
@@ -482,7 +428,7 @@ No modules.
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_k3s_vms"></a> [k3s\_vms](#input\_k3s\_vms) | K3s cluster VM specifications | <pre>map(object({<br>    vm_id      = number<br>    name       = string<br>    cores      = number<br>    memory     = number<br>    ip_address = string<br>    role       = string<br>  }))</pre> | <pre>{<br>  "control_01": {<br>    "cores": 2,<br>    "ip_address": "192.168.1.100",<br>    "memory": 4096,<br>    "name": "k3s-main-tf-01",<br>    "role": "control",<br>    "vm_id": 210<br>  },<br>  "worker_01": {<br>    "cores": 2,<br>    "ip_address": "192.168.1.101",<br>    "memory": 2048,<br>    "name": "k3s-worker-tf-01",<br>    "role": "worker",<br>    "vm_id": 211<br>  },<br>  "worker_02": {<br>    "cores": 2,<br>    "ip_address": "192.168.1.102",<br>    "memory": 2048,<br>    "name": "k3s-worker-tf-02",<br>    "role": "worker",<br>    "vm_id": 212<br>  },<br>  "worker_03": {<br>    "cores": 2,<br>    "ip_address": "192.168.1.103",<br>    "memory": 2048,<br>    "name": "k3s-worker-tf-03",<br>    "role": "worker",<br>    "vm_id": 213<br>  }<br>}</pre> | no |
+| <a name="input_k3s_vms"></a> [k3s\_vms](#input\_k3s\_vms) | K3s cluster VM specifications | <pre>map(object({<br>    vm_id      = number<br>    name       = string<br>    cores      = number<br>    memory     = number<br>    ip_address = string<br>    role       = string<br>  }))</pre> | <pre>{<br>  "control_01": {<br>    "cores": 2,<br>    "ip_address": "192.168.1.210",<br>    "memory": 4096,<br>    "name": "k3s-main-tf-01",<br>    "role": "control",<br>    "vm_id": 210<br>  },<br>  "control_02": {<br>    "cores": 2,<br>    "ip_address": "192.168.1.211",<br>    "memory": 4096,<br>    "name": "k3s-main-tf-02",<br>    "role": "control",<br>    "vm_id": 211<br>  },<br>  "worker_01": {<br>    "cores": 2,<br>    "ip_address": "192.168.1.215",<br>    "memory": 2048,<br>    "name": "k3s-worker-tf-01",<br>    "role": "worker",<br>    "vm_id": 215<br>  },<br>  "worker_02": {<br>    "cores": 2,<br>    "ip_address": "192.168.1.216",<br>    "memory": 2048,<br>    "name": "k3s-worker-tf-02",<br>    "role": "worker",<br>    "vm_id": 216<br>  }<br>}</pre> | no |
 | <a name="input_network"></a> [network](#input\_network) | Network configuration for VMs | <pre>object({<br>    gateway     = string<br>    cidr_suffix = string<br>  })</pre> | <pre>{<br>  "cidr_suffix": "/24",<br>  "gateway": "192.168.1.1"<br>}</pre> | no |
 | <a name="input_proxmox"></a> [proxmox](#input\_proxmox) | Proxmox connection configuration | <pre>object({<br>    endpoint = string<br>    node     = string<br>    insecure = bool<br>    ssh_user = string<br>  })</pre> | <pre>{<br>  "endpoint": "https://192.168.1.250:8006",<br>  "insecure": true,<br>  "node": "msi-proxmox",<br>  "ssh_user": "root"<br>}</pre> | no |
 | <a name="input_proxmox_auth"></a> [proxmox\_auth](#input\_proxmox\_auth) | Proxmox authentication credentials | <pre>object({<br>    api_token    = string<br>    username     = string<br>    password     = string<br>    ssh_password = string<br>  })</pre> | n/a | yes |
