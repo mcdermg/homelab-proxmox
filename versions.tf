@@ -13,18 +13,17 @@ provider "proxmox" {
   endpoint = var.proxmox.endpoint
   insecure = var.proxmox.insecure
 
-  # PRIMARY: API Token Authentication (recommended)
-  #api_token = var.proxmox_auth.api_token
+  # PRIMARY: API Token Authentication (recommended for production)
+  # api_token = var.proxmox_auth.api_token
 
-  # ALTERNATIVE: Username/Password Authentication (comment out api_token above and uncomment below)
+  # ALTERNATIVE: Username/Password Authentication (for testing)
   username = var.proxmox_auth.username
   password = var.proxmox_auth.password
 
   # SSH connection for certain operations (file uploads, etc.)
+  # When username/password match root account, SSH defaults to same credentials
   ssh {
     agent    = true
     username = var.proxmox.ssh_user
-    # Optional: Uncomment if not using SSH agent
-    # password = var.proxmox_auth.ssh_password
   }
 }
