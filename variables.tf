@@ -9,7 +9,7 @@ variable "proxmox" {
   })
   default = {
     endpoint = "https://192.168.1.250:8006"
-    node     = "msi-proxmox"
+    node     = "pve01"
     insecure = true
     ssh_user = "root"
   }
@@ -18,10 +18,10 @@ variable "proxmox" {
 variable "proxmox_auth" {
   description = "Proxmox authentication credentials"
   type = object({
-    api_token    = string
-    username     = string
-    password     = string
-    ssh_password = string
+    api_token    = optional(string, "")
+    username     = optional(string, "")
+    password     = optional(string, "")
+    ssh_password = optional(string, "")
   })
   sensitive = true
 }
@@ -61,8 +61,8 @@ variable "vm_defaults" {
     disk_interface = "scsi0"
     disk_size      = 17
     qemu_agent = {
-      enabled = true
-      timeout = "15m"
+      enabled = false
+      timeout = "4m"
     }
     behavior = {
       on_boot         = true
@@ -91,7 +91,7 @@ variable "vm_cloudinit" {
   type = object({
     username       = string
     password       = string
-    ssh_public_key = string
+    ssh_public_key = optional(string, "")
   })
   sensitive = true
 }
@@ -138,6 +138,14 @@ variable "k3s_vms" {
       cores      = 2
       memory     = 2048
       ip_address = "192.168.1.216"
+      role       = "worker"
+    }
+    worker_03 = {
+      vm_id      = 217
+      name       = "k3s-worker-tf-03"
+      cores      = 2
+      memory     = 2048
+      ip_address = "192.168.1.217"
       role       = "worker"
     }
   }

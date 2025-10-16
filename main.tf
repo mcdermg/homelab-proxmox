@@ -12,7 +12,7 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
 
   name        = each.value.name
   description = "K3s ${each.value.role} node - Managed by Terraform"
-  tags        = ["terraform", "k3s", each.value.role]
+  tags        = ["terraform", "k3s", each.value.role, replace(each.value.ip_address, ".", "-")]
 
   node_name = var.proxmox.node
   vm_id     = each.value.vm_id
@@ -72,7 +72,7 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
     user_account {
       username = var.vm_cloudinit.username
       password = var.vm_cloudinit.password
-      keys     = [var.vm_cloudinit.ssh_public_key]
+      keys     = var.vm_cloudinit.ssh_public_key != "" ? [var.vm_cloudinit.ssh_public_key] : []
     }
   }
 
