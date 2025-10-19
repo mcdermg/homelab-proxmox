@@ -4,7 +4,81 @@ locals {
     for key, vm in var.k3s_vms :
     key => "${vm.ip_address}${var.network.cidr_suffix}"
   }
+  datastore_id = "usbstorage"
+  node_name    = "pve01"
 }
+
+# ==============================================================================
+# DOWNLOADS
+# ==============================================================================
+
+# ISO DOWNLOADS
+resource "proxmox_virtual_environment_download_file" "iso_images" {
+  for_each = var.iso_downloads
+
+  node_name    = local.node_name
+  datastore_id = local.datastore_id
+  content_type = "iso"
+
+  url       = each.value.url
+  file_name = each.value.file_name
+
+  checksum           = each.value.checksum
+  checksum_algorithm = each.value.checksum != null ? each.value.checksum_algorithm : null
+
+  verify              = each.value.verify
+  overwrite           = each.value.overwrite
+  overwrite_unmanaged = each.value.overwrite_unmanaged
+  upload_timeout      = each.value.upload_timeout
+}
+
+# LXC CONTAINER TEMPLATE DOWNLOADS
+resource "proxmox_virtual_environment_download_file" "lxc_templates" {
+  for_each = var.lxc_template_downloads
+
+  node_name    = local.node_name
+  datastore_id = local.datastore_id
+  content_type = "vztmpl"
+
+  url       = each.value.url
+  file_name = each.value.file_name
+
+  checksum           = each.value.checksum
+  checksum_algorithm = each.value.checksum != null ? each.value.checksum_algorithm : null
+
+  decompression_algorithm = each.value.decompression_algorithm
+
+  verify              = each.value.verify
+  overwrite           = each.value.overwrite
+  overwrite_unmanaged = each.value.overwrite_unmanaged
+  upload_timeout      = each.value.upload_timeout
+}
+
+# VM IMAGE DOWNLOADS (cloud-init, qcow2, etc.)
+resource "proxmox_virtual_environment_download_file" "vm_images" {
+  for_each = var.vm_image_downloads
+
+  node_name    = local.node_name
+  datastore_id = local.datastore_id
+  content_type = "import"
+
+  url       = each.value.url
+  file_name = each.value.file_name
+
+  checksum           = each.value.checksum
+  checksum_algorithm = each.value.checksum != null ? each.value.checksum_algorithm : null
+
+  decompression_algorithm = each.value.decompression_algorithm
+
+  verify              = each.value.verify
+  overwrite           = each.value.overwrite
+  overwrite_unmanaged = each.value.overwrite_unmanaged
+  upload_timeout      = each.value.upload_timeout
+}
+
+# ==============================================================================
+# VM RESOURCES
+# ==============================================================================
 
 # K3S CLUSTER VMS
 resource "proxmox_virtual_environment_vm" "k3s_nodes" {
@@ -81,6 +155,7 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
     ignore_changes = [
       # Ignore changes to these attributes to prevent unnecessary updates
       started,
+      initialization,
     ]
   }
 }
