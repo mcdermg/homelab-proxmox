@@ -150,3 +150,94 @@ variable "k3s_vms" {
     }
   }
 }
+
+# ISO DOWNLOADS
+variable "iso_downloads" {
+  description = "ISO files to download to Proxmox storage"
+  type = map(object({
+    url                 = string
+    file_name           = optional(string)
+    checksum            = optional(string)
+    checksum_algorithm  = optional(string) # "md5", "sha1", "sha224", "sha256", "sha384", "sha512"
+    verify              = optional(bool, true)
+    overwrite           = optional(bool, true)
+    overwrite_unmanaged = optional(bool, false)
+    upload_timeout      = optional(number, 1800)
+  }))
+  default = {
+    debian_13_1 = {
+      url = "https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-13.1.0-amd64-netinst.iso"
+    }
+    alpine_322 = {
+      url = "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/x86_64/alpine-standard-3.22.2-x86_64.iso"
+    }
+    ubuntu_2404 = {
+      url = "https://releases.ubuntu.com/24.04.3/ubuntu-24.04.3-live-server-amd64.iso"
+    }
+  }
+}
+
+# LXC CONTAINER TEMPLATE DOWNLOADS
+variable "lxc_template_downloads" {
+  description = "LXC container templates to download to Proxmox storage"
+  type = map(object({
+    url                     = string
+    file_name               = optional(string)
+    checksum                = optional(string)
+    checksum_algorithm      = optional(string) # "md5", "sha1", "sha224", "sha256", "sha384", "sha512"
+    decompression_algorithm = optional(string) # "gz", "lzo", "zst", "bz2"
+    verify                  = optional(bool, true)
+    overwrite               = optional(bool, true)
+    overwrite_unmanaged     = optional(bool, false)
+    upload_timeout          = optional(number, 1800)
+  }))
+  default = {
+    alpine_320 = {
+      url = "http://download.proxmox.com/images/system/alpine-3.20-default_20240908_amd64.tar.xz"
+    }
+    turnkey_core = {
+      url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-12-turnkey-core_18.0-1_amd64.tar.gz"
+    }
+    turnkey_ansible = {
+      url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-11-turnkey-ansible_17.1-1_amd64.tar.gz"
+    }
+    turnkey_gitea = {
+      url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-11-turnkey-gitea_17.2-1_amd64.tar.gz"
+    }
+    turnkey_postgresql = {
+      url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-11-turnkey-postgresql_17.1-1_amd64.tar.gz"
+    }
+    turnkey_redis = {
+      url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-11-turnkey-redis_17.1-1_amd64.tar.gz"
+    }
+  }
+}
+
+variable "vm_image_downloads" {
+  description = "VM disk images to download to Proxmox storage"
+  type = map(object({
+    url                     = string
+    file_name               = optional(string)
+    checksum                = optional(string)
+    checksum_algorithm      = optional(string) # "md5", "sha1", "sha224", "sha256", "sha384", "sha512"
+    decompression_algorithm = optional(string) # "gz", "lzo", "zst", "bz2"
+    verify                  = optional(bool, true)
+    overwrite               = optional(bool, true)
+    overwrite_unmanaged     = optional(bool, false)
+    upload_timeout          = optional(number, 1800)
+  }))
+  default = {
+    #ubuntu_2404_cloud = {
+    #  url                = "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img"
+    #  file_name          = "ubuntu-24.04-cloudimg-amd64.img"
+    #  checksum           = "d2377667ea95222330ca2287817403c85178dd7e5967a071b83a75ef8c28105f"
+    #  checksum_algorithm = "sha256"
+    #  datastore_id = local.datastore_id
+    #}
+    # debian_12_cloud = {
+    #   url          = "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"
+    #   file_name    = "debian-12-generic-amd64.img"
+    #   datastore_id = local.datastore_id
+    # }
+  }
+}
