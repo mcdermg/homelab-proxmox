@@ -192,22 +192,19 @@ variable "lxc_template_downloads" {
     upload_timeout          = optional(number, 1800)
   }))
   default = {
-    alpine_320 = {
-      url = "http://download.proxmox.com/images/system/alpine-3.20-default_20240908_amd64.tar.xz"
+    alpine_322 = {
+      url = "http://download.proxmox.com/images/system/alpine-3.22-default_20250617_amd64.tar.xz"
     }
-    turnkey_core = {
-      url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-12-turnkey-core_18.0-1_amd64.tar.gz"
+    debian_13 = {
+      url = "http://download.proxmox.com/images/system/debian-13-standard_13.1-2_amd64.tar.zst"
     }
-    turnkey_ansible = {
-      url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-11-turnkey-ansible_17.1-1_amd64.tar.gz"
+    turnkey_debian_12_gitea = {
+      url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-12-turnkey-gitea_18.0-1_amd64.tar.gz"
     }
-    turnkey_gitea = {
-      url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-11-turnkey-gitea_17.2-1_amd64.tar.gz"
-    }
-    turnkey_postgresql = {
+    turnkey_debian_11_postgresql = {
       url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-11-turnkey-postgresql_17.1-1_amd64.tar.gz"
     }
-    turnkey_redis = {
+    turnkey_debian_11_redis = {
       url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-11-turnkey-redis_17.1-1_amd64.tar.gz"
     }
   }
