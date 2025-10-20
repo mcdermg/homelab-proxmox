@@ -155,14 +155,15 @@ variable "k3s_vms" {
 variable "iso_downloads" {
   description = "ISO files to download to Proxmox storage"
   type = map(object({
-    url                 = string
-    file_name           = optional(string)
-    checksum            = optional(string)
-    checksum_algorithm  = optional(string) # "md5", "sha1", "sha224", "sha256", "sha384", "sha512"
-    verify              = optional(bool, true)
-    overwrite           = optional(bool, true)
-    overwrite_unmanaged = optional(bool, false)
-    upload_timeout      = optional(number, 1800)
+    url                     = string
+    file_name               = optional(string)
+    checksum                = optional(string)
+    checksum_algorithm      = optional(string) # "md5", "sha1", "sha224", "sha256", "sha384", "sha512"
+    decompression_algorithm = optional(string)
+    verify                  = optional(bool, true)
+    overwrite               = optional(bool, true)
+    overwrite_unmanaged     = optional(bool, false)
+    upload_timeout          = optional(number, 1800)
   }))
   default = {
     debian_13_1 = {
@@ -229,12 +230,10 @@ variable "vm_image_downloads" {
     #  file_name          = "ubuntu-24.04-cloudimg-amd64.img"
     #  checksum           = "d2377667ea95222330ca2287817403c85178dd7e5967a071b83a75ef8c28105f"
     #  checksum_algorithm = "sha256"
-    #  datastore_id = local.datastore_id
     #}
     # debian_12_cloud = {
-    #   url          = "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"
-    #   file_name    = "debian-12-generic-amd64.img"
-    #   datastore_id = local.datastore_id
+    #   url       = "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"
+    #   file_name = "debian-12-generic-amd64.img"
     # }
   }
 }

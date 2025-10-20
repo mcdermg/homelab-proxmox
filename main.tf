@@ -8,79 +8,36 @@ locals {
   node_name    = "pve01"
 }
 
-# ==============================================================================
 # DOWNLOADS
-# ==============================================================================
-
-# ISO DOWNLOADS
-resource "proxmox_virtual_environment_download_file" "iso_images" {
-  for_each = var.iso_downloads
+module "iso_downloads" {
+  source = "./modules/download_file"
 
   node_name    = local.node_name
   datastore_id = local.datastore_id
+  downloads    = var.iso_downloads
   content_type = "iso"
-
-  url       = each.value.url
-  file_name = each.value.file_name
-
-  checksum           = each.value.checksum
-  checksum_algorithm = each.value.checksum != null ? each.value.checksum_algorithm : null
-
-  verify              = each.value.verify
-  overwrite           = each.value.overwrite
-  overwrite_unmanaged = each.value.overwrite_unmanaged
-  upload_timeout      = each.value.upload_timeout
 }
 
-# LXC CONTAINER TEMPLATE DOWNLOADS
-resource "proxmox_virtual_environment_download_file" "lxc_templates" {
-  for_each = var.lxc_template_downloads
+module "lxc_template_downloads" {
+  source = "./modules/download_file"
 
   node_name    = local.node_name
   datastore_id = local.datastore_id
+  downloads    = var.lxc_template_downloads
   content_type = "vztmpl"
-
-  url       = each.value.url
-  file_name = each.value.file_name
-
-  checksum           = each.value.checksum
-  checksum_algorithm = each.value.checksum != null ? each.value.checksum_algorithm : null
-
-  decompression_algorithm = each.value.decompression_algorithm
-
-  verify              = each.value.verify
-  overwrite           = each.value.overwrite
-  overwrite_unmanaged = each.value.overwrite_unmanaged
-  upload_timeout      = each.value.upload_timeout
 }
 
-# VM IMAGE DOWNLOADS (cloud-init, qcow2, etc.)
-resource "proxmox_virtual_environment_download_file" "vm_images" {
-  for_each = var.vm_image_downloads
+module "vm_image_downloads" {
+  source = "./modules/download_file"
 
   node_name    = local.node_name
   datastore_id = local.datastore_id
+  downloads    = var.vm_image_downloads
   content_type = "import"
-
-  url       = each.value.url
-  file_name = each.value.file_name
-
-  checksum           = each.value.checksum
-  checksum_algorithm = each.value.checksum != null ? each.value.checksum_algorithm : null
-
-  decompression_algorithm = each.value.decompression_algorithm
-
-  verify              = each.value.verify
-  overwrite           = each.value.overwrite
-  overwrite_unmanaged = each.value.overwrite_unmanaged
-  upload_timeout      = each.value.upload_timeout
 }
 
-# ==============================================================================
 # VM RESOURCES
-# ==============================================================================
-
-# K3S CLUSTER VMS
+## K3S CLUSTER VMS
 resource "proxmox_virtual_environment_vm" "k3s_nodes" {
   for_each = var.k3s_vms
 
