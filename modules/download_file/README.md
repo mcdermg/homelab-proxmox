@@ -21,4 +21,39 @@ module "iso_downloads" {
 ```
 
 <!-- BEGIN_TF_DOCS -->
+## Requirements
+
+No requirements.
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | 0.85.1 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [proxmox_virtual_environment_download_file.this](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/virtual_environment_download_file) | resource |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_content_type"></a> [content\_type](#input\_content\_type) | The type of content to download: 'iso', 'vztmpl', or 'import' | `string` | n/a | yes |
+| <a name="input_datastore_id"></a> [datastore\_id](#input\_datastore\_id) | The ID of the datastore where files will be stored | `string` | n/a | yes |
+| <a name="input_downloads"></a> [downloads](#input\_downloads) | Files to download to Proxmox storage | <pre>map(object({<br>    url                     = string<br>    file_name               = optional(string)<br>    checksum                = optional(string)<br>    checksum_algorithm      = optional(string) # "md5", "sha1", "sha224", "sha256", "sha384", "sha512"<br>    decompression_algorithm = optional(string) # "gz", "lzo", "zst", "bz2" (only for vztmpl and import)<br>    verify                  = optional(bool, true)<br>    overwrite               = optional(bool, true)<br>    overwrite_unmanaged     = optional(bool, false)<br>    upload_timeout          = optional(number, 1800)<br>  }))</pre> | `{}` | no |
+| <a name="input_node_name"></a> [node\_name](#input\_node\_name) | The name of the Proxmox node where files will be downloaded | `string` | n/a | yes |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| <a name="output_file_ids"></a> [file\_ids](#output\_file\_ids) | Map of file IDs for downloaded files |
+| <a name="output_files"></a> [files](#output\_files) | Map of all downloaded files |
 <!-- END_TF_DOCS -->
