@@ -1,90 +1,63 @@
 locals {
-  # Construct full IP addresses with CIDR
-  vm_ip_configs = {
-    for key, vm in var.k3s_vms :
-    key => "${vm.ip_address}${var.network.cidr_suffix}"
-  }
   datastore_id = "usbstorage"
   node_name    = "pve01"
 }
 
-# VM RESOURCES
-## K3S CLUSTER VMS
-resource "proxmox_virtual_environment_vm" "k3s_nodes" {
-  for_each = var.k3s_vms
+# DOWNLOADS
+module "iso_downloads" {
+  source = "./modules/download_file"
 
-  name        = each.value.name
-  description = "K3s ${each.value.role} node - Managed by Terraform"
-  tags        = ["terraform", "k3s", each.value.role, replace(each.value.ip_address, ".", "-")]
+  node_name    = local.node_name
+  datastore_id = local.datastore_id
+  downloads    = var.iso_downloads
+  content_type = "iso"
+}
 
-  node_name = var.proxmox.node
-  vm_id     = each.value.vm_id
+module "lxc_template_downloads" {
+  source = "./modules/download_file"
 
-  on_boot = var.vm_defaults.behavior.on_boot
-  started = var.vm_defaults.behavior.started
+  node_name    = local.node_name
+  datastore_id = local.datastore_id
+  downloads    = var.lxc_template_downloads
+  content_type = "vztmpl"
+}
 
-  stop_on_destroy = var.vm_defaults.behavior.stop_on_destroy
+module "vm_image_downloads" {
+  source = "./modules/download_file"
 
-  # CLONE FROM TEMPLATE
-  clone {
-    vm_id = var.proxmox_infrastructure.template_vm_id
-    full  = true
-  }
+  node_name    = local.node_name
+  datastore_id = local.datastore_id
+  downloads    = var.vm_image_downloads
+  content_type = "import"
+}
 
-  # CPU CONFIGURATION
-  cpu {
-    cores = each.value.cores
-    type  = "host"
-  }
+# K3S CLUSTER
+module "k3s_cluster" {
+  source = "./modules/k3s_cluster"
 
-  # MEMORY CONFIGURATION
-  memory {
-    dedicated = each.value.memory
-  }
+  cluster_nodes = var.k3s_vms
 
-  # QEMU GUEST AGENT
-  agent {
-    enabled = var.vm_defaults.qemu_agent.enabled
-    timeout = var.vm_defaults.qemu_agent.timeout
-  }
+  # Proxmox settings
+  proxmox_node   = var.proxmox.node
+  template_vm_id = var.proxmox_infrastructure.template_vm_id
+  storage_pool   = var.proxmox_infrastructure.storage_pool
 
-  # DISK CONFIGURATION
-  disk {
-    datastore_id = var.proxmox_infrastructure.storage_pool
-    interface    = var.vm_defaults.disk_interface
-    size         = var.vm_defaults.disk_size
-    file_format  = "raw"
-  }
+  # Network config
+  network_bridge      = var.proxmox_infrastructure.network_bridge
+  network_gateway     = var.network.gateway
+  network_cidr_suffix = var.network.cidr_suffix
 
-  # NETWORK CONFIGURATION
-  network_device {
-    bridge = var.proxmox_infrastructure.network_bridge
-  }
+  # VM defaults
+  default_disk_interface = var.vm_defaults.disk_interface
+  default_disk_size      = var.vm_defaults.disk_size
+  qemu_agent_enabled     = var.vm_defaults.qemu_agent.enabled
+  qemu_agent_timeout     = var.vm_defaults.qemu_agent.timeout
+  vm_on_boot             = var.vm_defaults.behavior.on_boot
+  vm_started             = var.vm_defaults.behavior.started
+  vm_stop_on_destroy     = var.vm_defaults.behavior.stop_on_destroy
 
-  # CLOUD-INIT CONFIGURATION
-  initialization {
-    datastore_id = var.proxmox_infrastructure.storage_pool
-
-    ip_config {
-      ipv4 {
-        address = local.vm_ip_configs[each.key]
-        gateway = var.network.gateway
-      }
-    }
-
-    user_account {
-      username = var.vm_cloudinit.username
-      password = var.vm_cloudinit.password
-      keys     = var.vm_cloudinit.ssh_public_key != "" ? [var.vm_cloudinit.ssh_public_key] : []
-    }
-  }
-
-  # LIFECYCLE MANAGEMENT
-  lifecycle {
-    ignore_changes = [
-      # Ignore changes to these attributes to prevent unnecessary updates
-      started,
-      initialization,
-    ]
-  }
+  # Cloud-init configuration
+  cloudinit_username = var.vm_cloudinit.username
+  cloudinit_password = var.vm_cloudinit.password
+  cloudinit_ssh_key  = var.vm_cloudinit.ssh_public_key
 }
