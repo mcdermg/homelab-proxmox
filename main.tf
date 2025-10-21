@@ -61,3 +61,38 @@ module "k3s_cluster" {
   cloudinit_password = var.vm_cloudinit.password
   cloudinit_ssh_key  = var.vm_cloudinit.ssh_public_key
 }
+
+# LXC CONTAINERS
+module "lxc_containers" {
+  source = "./modules/lxc_container"
+
+  proxmox_node    = var.proxmox.node
+  storage_pool    = var.proxmox_infrastructure.storage_pool
+  network_bridge  = var.proxmox_infrastructure.network_bridge
+  network_gateway = var.network.gateway
+
+  default_ssh_keys = var.vm_cloudinit.ssh_public_key != "" ? [var.vm_cloudinit.ssh_public_key] : []
+  default_password = var.vm_cloudinit.password
+
+  containers = {
+    alpine_test = {
+      vm_id            = 113
+      name             = "alpine-test"
+      template_file_id = "${local.datastore_id}:vztmpl/alpine-3.22-default_20250617_amd64.tar.xz"
+      os_type          = "alpine"
+      cores            = 1
+      memory           = 512
+      disk_size        = 8
+
+      network_interfaces = [{
+        name = "eth0"
+      }]
+
+      ip_configs = [{
+        ipv4_address = "192.168.1.113/24"
+      }]
+
+      tags = []
+    }
+  }
+}

@@ -36,6 +36,7 @@ No providers.
 |------|--------|---------|
 | <a name="module_iso_downloads"></a> [iso\_downloads](#module\_iso\_downloads) | ./modules/download_file | n/a |
 | <a name="module_k3s_cluster"></a> [k3s\_cluster](#module\_k3s\_cluster) | ./modules/k3s_cluster | n/a |
+| <a name="module_lxc_containers"></a> [lxc\_containers](#module\_lxc\_containers) | ./modules/lxc_container | n/a |
 | <a name="module_lxc_template_downloads"></a> [lxc\_template\_downloads](#module\_lxc\_template\_downloads) | ./modules/download_file | n/a |
 | <a name="module_vm_image_downloads"></a> [vm\_image\_downloads](#module\_vm\_image\_downloads) | ./modules/download_file | n/a |
 
