@@ -20,18 +20,6 @@ variable "network_gateway" {
   default     = null
 }
 
-variable "dns_domain" {
-  description = "Default DNS domain for containers"
-  type        = string
-  default     = ""
-}
-
-variable "dns_servers" {
-  description = "Default DNS servers for containers"
-  type        = list(string)
-  default     = []
-}
-
 variable "default_ssh_keys" {
   description = "Default SSH public keys for container root user"
   type        = list(string)
@@ -83,10 +71,6 @@ variable "containers" {
       ipv6_address = optional(string)
       ipv6_gateway = optional(string)
     })), [])
-
-    # DNS
-    dns_domain  = optional(string)
-    dns_servers = optional(list(string))
 
     # Authentication
     ssh_keys = optional(list(string))

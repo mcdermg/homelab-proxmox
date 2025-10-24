@@ -7,12 +7,6 @@ variable "proxmox" {
     insecure = bool
     ssh_user = string
   })
-  default = {
-    endpoint = "https://192.168.1.250:8006"
-    node     = "pve01"
-    insecure = true
-    ssh_user = "root"
-  }
 }
 
 variable "proxmox_auth" {
@@ -24,6 +18,18 @@ variable "proxmox_auth" {
     ssh_password = optional(string, "")
   })
   sensitive = true
+}
+
+variable "node_name" {
+  description = "Name of the Proxmox node to use"
+  type        = string
+  default     = "pve01"
+}
+
+variable "network_bridge" {
+  description = "Network bridge to use for VMs"
+  type        = string
+  default     = "vmbr0"
 }
 
 # DOWNLOADS
@@ -115,24 +121,9 @@ variable "vm_image_downloads" {
   }
 }
 
-# PROXMOX INFRASTRUCTURE
-variable "proxmox_infrastructure" {
-  description = "Proxmox infrastructure settings"
-  type = object({
-    storage_pool   = string
-    network_bridge = string
-    template_vm_id = number
-  })
-  default = {
-    storage_pool   = "local-lvm"
-    network_bridge = "vmbr0"
-    template_vm_id = 9000
-  }
-}
-
-# VM DEFAULTS
-variable "vm_defaults" {
-  description = "Default VM configuration"
+# K3S VM DEFAULTS
+variable "k3s_defaults" {
+  description = "Default configuration for K3s VMs"
   type = object({
     disk_interface = string
     disk_size      = number
@@ -185,7 +176,13 @@ variable "vm_cloudinit" {
   sensitive = true
 }
 
-# K3S CLUSTER VM DEFINITIONS
+# K3S CLUSTER CONFIGURATION
+variable "k3s_template_vm_id" {
+  description = "VM ID of the template to clone for K3s nodes"
+  type        = number
+  default     = 9000
+}
+
 variable "k3s_vms" {
   description = "K3s cluster VM specifications"
   type = map(object({
@@ -236,6 +233,86 @@ variable "k3s_vms" {
       memory     = 2048
       ip_address = "192.168.1.217"
       role       = "node"
+    }
+  }
+}
+
+# LXC CONTAINER DEFINITIONS
+variable "lxc_containers" {
+  description = "LXC container specifications"
+  type = map(object({
+    vm_id            = number
+    name             = string
+    template_file_id = string
+    os_type          = optional(string, "debian")
+
+    # Resources
+    cores     = optional(number, 1)
+    cpu_units = optional(number, 1024)
+    memory    = optional(number, 512)
+    swap      = optional(number, 0)
+    disk_size = optional(number, 8)
+
+    # Network
+    ip_address = string # Main IP address for the container
+
+    # Optional advanced configuration
+    description  = optional(string)
+    unprivileged = optional(bool, true)
+
+    # Features for special use cases
+    features = optional(object({
+      nesting = optional(bool, false) # Enable for Docker/nested containers
+      keyctl  = optional(bool, false) # Enable for systemd
+      fuse    = optional(bool, false)
+    }))
+
+    # Startup configuration
+    startup_order = optional(number)
+    start_on_boot = optional(bool, true)
+    started       = optional(bool, true)
+
+    # Tags (terraform and IP will be auto-added)
+    tags = optional(list(string), [])
+  }))
+  default = {
+    alpine = {
+      vm_id            = 113
+      name             = "alpine"
+      template_file_id = "alpine-3.22-default_20250617_amd64.tar.xz"
+      os_type          = "alpine"
+      cores            = 1
+      memory           = 512
+      disk_size        = 8
+      ip_address       = "192.168.1.113"
+      tags             = []
+    }
+    debian = {
+      vm_id            = 114
+      name             = "debian"
+      template_file_id = "debian-13-standard_13.1-2_amd64.tar.zst"
+      os_type          = "debian"
+      cores            = 2
+      memory           = 2048
+      disk_size        = 20
+      ip_address       = "192.168.1.114"
+      tags             = []
+    }
+    redis = {
+      vm_id            = 115
+      name             = "redis"
+      template_file_id = "debian-11-turnkey-redis_17.1-1_amd64.tar.gz"
+      os_type          = "debian"
+      cores            = 2
+      memory           = 2048
+      disk_size        = 10
+      swap             = 512
+      ip_address       = "192.168.1.115"
+      started          = false
+      features = {
+        nesting = true
+      }
+      tags = ["turnkey"]
     }
   }
 }

@@ -70,14 +70,6 @@ resource "proxmox_virtual_environment_container" "this" {
       }
     }
 
-    dynamic "dns" {
-      for_each = (try(each.value.dns_domain, var.dns_domain) != "" || length(try(each.value.dns_servers, var.dns_servers)) > 0) ? [1] : []
-      content {
-        domain  = try(each.value.dns_domain, var.dns_domain)
-        servers = try(each.value.dns_servers, var.dns_servers)
-      }
-    }
-
     user_account {
       keys     = try(each.value.ssh_keys, var.default_ssh_keys)
       password = try(each.value.password, var.default_password)
