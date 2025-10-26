@@ -265,6 +265,7 @@ variable "lxc_containers" {
       nesting = optional(bool, false) # Enable for Docker/nested containers
       keyctl  = optional(bool, false) # Enable for systemd
       fuse    = optional(bool, false)
+      mount   = optional(list(string), [])
     }))
 
     # Startup configuration
@@ -308,6 +309,22 @@ variable "lxc_containers" {
       disk_size        = 10
       swap             = 512
       ip_address       = "192.168.1.115"
+      started          = false
+      features = {
+        nesting = true
+      }
+      tags = ["turnkey"]
+    }
+    gitea = {
+      vm_id            = 117
+      name             = "gitea"
+      template_file_id = "debian-12-turnkey-gitea_18.0-1_amd64.tar.gz"
+      os_type          = "debian"
+      cores            = 2
+      memory           = 2048
+      disk_size        = 10
+      swap             = 512
+      ip_address       = "192.168.1.117"
       started          = false
       features = {
         nesting = true
