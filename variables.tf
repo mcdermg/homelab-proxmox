@@ -176,6 +176,16 @@ variable "vm_cloudinit" {
   sensitive = true
 }
 
+# LXC CONTAINER DEFAULTS
+variable "lxc_defaults" {
+  description = "Default configuration for LXC containers"
+  type = object({
+    password       = string
+    ssh_public_key = optional(string, "")
+  })
+  sensitive = true
+}
+
 # K3S CLUSTER CONFIGURATION
 variable "k3s_template_vm_id" {
   description = "VM ID of the template to clone for K3s nodes"
@@ -309,6 +319,22 @@ variable "lxc_containers" {
       disk_size        = 10
       swap             = 512
       ip_address       = "192.168.1.115"
+      started          = false
+      features = {
+        nesting = true
+      }
+      tags = ["turnkey"]
+    }
+    postgres = {
+      vm_id            = 116
+      name             = "postgres"
+      template_file_id = "debian-11-turnkey-postgresql_17.1-1_amd64.tar.gz"
+      os_type          = "debian"
+      cores            = 2
+      memory           = 2048
+      disk_size        = 10
+      swap             = 512
+      ip_address       = "192.168.1.116"
       started          = false
       features = {
         nesting = true

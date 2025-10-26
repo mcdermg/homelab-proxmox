@@ -84,8 +84,8 @@ module "lxc_containers" {
   network_bridge  = var.network_bridge
   network_gateway = var.network.gateway
 
-  default_ssh_keys = var.vm_cloudinit.ssh_public_key != "" ? [var.vm_cloudinit.ssh_public_key] : []
-  default_password = var.vm_cloudinit.password
+  default_ssh_keys = var.lxc_defaults.ssh_public_key != "" ? [var.lxc_defaults.ssh_public_key] : []
+  default_password = var.lxc_defaults.password
 
   containers = {
     for key, container in var.lxc_containers : key => {

@@ -124,4 +124,9 @@ resource "proxmox_virtual_environment_container" "this" {
 
   # Protection
   protection = try(each.value.protection, false)
+
+  # Lifecycle - ignore manual start/stop changes
+  lifecycle {
+    ignore_changes = [started]
+  }
 }
