@@ -1,11 +1,4 @@
 #!/bin/bash
-# Wait for postgres serive if on a resatar
-sleep 10
-#Check if Gitea database already exists and exit if so
-if su - postgres -c "psql -lqt 2>/dev/null | cut -d \| -f 1 | grep -qw gitea"; then
-  echo "Gitea database already exists"
-  exit 0
-fi
 # Create Gitea database and user
 su - postgres -c "psql -c \"CREATE DATABASE gitea;\""
 su - postgres -c "psql -c \"CREATE USER gitea WITH PASSWORD 'GiteaDB123';\""
