@@ -208,7 +208,7 @@ variable "k3s_vms" {
       vm_id      = 210
       name       = "k3s-control-tf-01"
       cores      = 2
-      memory     = 4096
+      memory     = 2048
       ip_address = "192.168.1.210"
       role       = "control"
     }
@@ -216,7 +216,7 @@ variable "k3s_vms" {
       vm_id      = 211
       name       = "k3s-control-tf-02"
       cores      = 2
-      memory     = 4096
+      memory     = 2048
       ip_address = "192.168.1.211"
       role       = "control"
     }
@@ -234,14 +234,6 @@ variable "k3s_vms" {
       cores      = 2
       memory     = 2048
       ip_address = "192.168.1.216"
-      role       = "node"
-    }
-    worker_03 = {
-      vm_id      = 217
-      name       = "k3s-node-tf-03"
-      cores      = 2
-      memory     = 2048
-      ip_address = "192.168.1.217"
       role       = "node"
     }
   }
