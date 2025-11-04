@@ -1,161 +1,126 @@
 locals {
-  # Construct full IP addresses with CIDR
-  vm_ip_configs = {
-    for key, vm in var.k3s_vms :
-    key => "${vm.ip_address}${var.network.cidr_suffix}"
-  }
-  datastore_id = "usbstorage"
-  node_name    = "pve01"
+  # Have been playing with storage so leaving these here for now and can move to vars later
+  datastore_id = "nvme-files"   # NVMe ZFS pool for ISOs/templates (file storage)
+  storage_pool = "nvme-storage" # NVMe ZFS pool for VM/container disks
 }
 
-# ==============================================================================
 # DOWNLOADS
-# ==============================================================================
+module "lxc_template_downloads" {
+  source = "./modules/download_file"
 
-# ISO DOWNLOADS
-resource "proxmox_virtual_environment_download_file" "iso_images" {
-  for_each = var.iso_downloads
-
-  node_name    = local.node_name
+  node_name    = var.node_name
   datastore_id = local.datastore_id
+  downloads    = var.lxc_template_downloads
+  content_type = "vztmpl"
+}
+
+module "iso_downloads" {
+  source = "./modules/download_file"
+
+  node_name    = var.node_name
+  datastore_id = local.datastore_id
+  downloads    = var.iso_downloads
   content_type = "iso"
 
-  url       = each.value.url
-  file_name = each.value.file_name
-
-  checksum           = each.value.checksum
-  checksum_algorithm = each.value.checksum != null ? each.value.checksum_algorithm : null
-
-  verify              = each.value.verify
-  overwrite           = each.value.overwrite
-  overwrite_unmanaged = each.value.overwrite_unmanaged
-  upload_timeout      = each.value.upload_timeout
+  depends_on = [
+    module.lxc_template_downloads,
+  ]
 }
 
-# LXC CONTAINER TEMPLATE DOWNLOADS
-resource "proxmox_virtual_environment_download_file" "lxc_templates" {
-  for_each = var.lxc_template_downloads
+module "vm_image_downloads" {
+  source = "./modules/download_file"
 
-  node_name    = local.node_name
+  node_name    = var.node_name
   datastore_id = local.datastore_id
-  content_type = "vztmpl"
-
-  url       = each.value.url
-  file_name = each.value.file_name
-
-  checksum           = each.value.checksum
-  checksum_algorithm = each.value.checksum != null ? each.value.checksum_algorithm : null
-
-  decompression_algorithm = each.value.decompression_algorithm
-
-  verify              = each.value.verify
-  overwrite           = each.value.overwrite
-  overwrite_unmanaged = each.value.overwrite_unmanaged
-  upload_timeout      = each.value.upload_timeout
-}
-
-# VM IMAGE DOWNLOADS (cloud-init, qcow2, etc.)
-resource "proxmox_virtual_environment_download_file" "vm_images" {
-  for_each = var.vm_image_downloads
-
-  node_name    = local.node_name
-  datastore_id = local.datastore_id
+  downloads    = var.vm_image_downloads
   content_type = "import"
 
-  url       = each.value.url
-  file_name = each.value.file_name
-
-  checksum           = each.value.checksum
-  checksum_algorithm = each.value.checksum != null ? each.value.checksum_algorithm : null
-
-  decompression_algorithm = each.value.decompression_algorithm
-
-  verify              = each.value.verify
-  overwrite           = each.value.overwrite
-  overwrite_unmanaged = each.value.overwrite_unmanaged
-  upload_timeout      = each.value.upload_timeout
+  depends_on = [
+    module.iso_downloads,
+  ]
 }
 
-# ==============================================================================
-# VM RESOURCES
-# ==============================================================================
+# K3S CLUSTER
+module "k3s_cluster" {
+  source = "./modules/k3s_cluster"
 
-# K3S CLUSTER VMS
-resource "proxmox_virtual_environment_vm" "k3s_nodes" {
-  for_each = var.k3s_vms
+  cluster_nodes = var.k3s_vms
 
-  name        = each.value.name
-  description = "K3s ${each.value.role} node - Managed by Terraform"
-  tags        = ["terraform", "k3s", each.value.role, replace(each.value.ip_address, ".", "-")]
+  # Proxmox settings
+  proxmox_node   = var.proxmox.node
+  template_vm_id = var.k3s_template_vm_id
+  storage_pool   = local.storage_pool
 
-  node_name = var.proxmox.node
-  vm_id     = each.value.vm_id
+  # Network config
+  network_bridge      = var.network_bridge
+  network_gateway     = var.network.gateway
+  network_cidr_suffix = var.network.cidr_suffix
 
-  on_boot = var.vm_defaults.behavior.on_boot
-  started = var.vm_defaults.behavior.started
+  # VM defaults
+  default_disk_interface = var.k3s_defaults.disk_interface
+  default_disk_size      = var.k3s_defaults.disk_size
+  qemu_agent_enabled     = var.k3s_defaults.qemu_agent.enabled
+  qemu_agent_timeout     = var.k3s_defaults.qemu_agent.timeout
+  vm_on_boot             = var.k3s_defaults.behavior.on_boot
+  vm_started             = var.k3s_defaults.behavior.started
+  vm_stop_on_destroy     = var.k3s_defaults.behavior.stop_on_destroy
 
-  stop_on_destroy = var.vm_defaults.behavior.stop_on_destroy
+  # Cloud-init configuration
+  cloudinit_username = var.vm_cloudinit.username
+  cloudinit_password = var.vm_cloudinit.password
+  cloudinit_ssh_key  = var.vm_cloudinit.ssh_public_key
 
-  # CLONE FROM TEMPLATE
-  clone {
-    vm_id = var.proxmox_infrastructure.template_vm_id
-    full  = true
-  }
+  depends_on = [
+    module.vm_image_downloads, # doesn't really but just for not doing everything at once
+  ]
+}
 
-  # CPU CONFIGURATION
-  cpu {
-    cores = each.value.cores
-    type  = "host"
-  }
+# LXC CONTAINERS
+module "lxc_containers" {
+  source = "./modules/lxc_container"
 
-  # MEMORY CONFIGURATION
-  memory {
-    dedicated = each.value.memory
-  }
+  proxmox_node    = var.proxmox.node
+  storage_pool    = local.storage_pool
+  network_bridge  = var.network_bridge
+  network_gateway = var.network.gateway
 
-  # QEMU GUEST AGENT
-  agent {
-    enabled = var.vm_defaults.qemu_agent.enabled
-    timeout = var.vm_defaults.qemu_agent.timeout
-  }
+  default_ssh_keys = var.lxc_defaults.ssh_public_key != "" ? [var.lxc_defaults.ssh_public_key] : []
+  default_password = var.lxc_defaults.password
 
-  # DISK CONFIGURATION
-  disk {
-    datastore_id = var.proxmox_infrastructure.storage_pool
-    interface    = var.vm_defaults.disk_interface
-    size         = var.vm_defaults.disk_size
-    file_format  = "raw"
-  }
+  containers = {
+    for key, container in var.lxc_containers : key => {
+      vm_id            = container.vm_id
+      name             = container.name
+      template_file_id = "${local.datastore_id}:vztmpl/${container.template_file_id}"
+      os_type          = container.os_type
+      cores            = container.cores
+      cpu_units        = container.cpu_units
+      memory           = container.memory
+      swap             = container.swap
+      disk_size        = container.disk_size
+      description      = container.description
+      unprivileged     = container.unprivileged
 
-  # NETWORK CONFIGURATION
-  network_device {
-    bridge = var.proxmox_infrastructure.network_bridge
-  }
+      network_interfaces = [{
+        name = "eth0"
+      }]
 
-  # CLOUD-INIT CONFIGURATION
-  initialization {
-    datastore_id = var.proxmox_infrastructure.storage_pool
+      ip_configs = [{
+        ipv4_address = "${container.ip_address}${var.network.cidr_suffix}"
+        ipv4_gateway = var.network.gateway
+      }]
 
-    ip_config {
-      ipv4 {
-        address = local.vm_ip_configs[each.key]
-        gateway = var.network.gateway
-      }
+      features = container.features
+
+      startup_order = container.startup_order
+      start_on_boot = container.start_on_boot
+      started       = container.started
+
+      tags = container.tags
     }
-
-    user_account {
-      username = var.vm_cloudinit.username
-      password = var.vm_cloudinit.password
-      keys     = var.vm_cloudinit.ssh_public_key != "" ? [var.vm_cloudinit.ssh_public_key] : []
-    }
   }
-
-  # LIFECYCLE MANAGEMENT
-  lifecycle {
-    ignore_changes = [
-      # Ignore changes to these attributes to prevent unnecessary updates
-      started,
-      initialization,
-    ]
-  }
+  depends_on = [
+    module.lxc_template_downloads,
+    module.k3s_cluster,
+  ]
 }

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is a Terraform project for managing virtual machines on a Proxmox VE server using Infrastructure as Code. The project provisions VMs for a **K3s Kubernetes High Availability cluster** with **embedded etcd** in a homelab environment. VMs are managed by Terraform, while K3s installation and the Raspberry Pi nodes are handled by Ansible.
+This is a Terraform project for managing virtual machines on a Proxmox VE server using Infrastructure as Code. The project provisions VMs and lsc containers amongst other resources in Proxmox. Some VMs are part of a **K3s Kubernetes High Availability cluster** with **embedded etcd**. VMs are managed by Terraform.
 
 ## K3s HA Architecture
 
@@ -38,9 +38,7 @@ K3s embedded etcd requires an odd number of control nodes (3, 5, 7) for quorum. 
 ### IP Addressing Scheme
 
 **Convention:** Last octet matches VM ID
-Control nodes staring at VM ID 210 so last IP octect xxx.xxx.x.210 and going to xxx.xxx.x.215 althoug we only use two for now with room for future expansion in Proxmox VM ID and IP range as required.
-
-The same setup for the worked noes starting at xxx.xxx.x.215 and iterating upas requiored with only 2 in place for now.
+Control nodes staring at VM ID 210 so last IP octet xxx.xxx.x.210 and going to xxx.xxx.x.215 although we only use two for now with room for future expansion in Proxmox VM ID and IP range as required.
 
 ## Network Architecture
 
@@ -90,7 +88,7 @@ terraform-proxmox/
 ├── variables.tf                # All variable definitions with types and defaults
 ├── main.tf                     # VM resource definitions using for_each
 ├── outputs.tf                  # Outputs for Ansible integration and VM info
-├── terraform.tfvars.example    # Example variable values (copy to terraform.tfvars)
+├── terraform.tfvars            # variable values
 ├── .gitignore                  # Git ignore patterns (excludes .tfvars, state files)
 ├── .terraform.lock.hcl         # Provider version lock file (auto-generated)
 ├── README.md                   # User-facing documentation
@@ -334,198 +332,9 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
 }
 ```
 
-## Common Tasks
-
-### Adding a New VM
-
-1. Add entry to `k3s_vms` variable in `terraform.tfvars`:
-```hcl
-k3s_vms = {
-  # ... existing VMs ...
-  worker_04 = {
-    vm_id      = 214
-    name       = "k3s-worker-tf-04"
-    cores      = 2
-    memory     = 2048
-    ip_address = "192.168.1.214"
-    role       = "worker"
-  }
-}
-```
-
-2. Run `terraform apply` - the `for_each` will handle it
-
-### Changing VM Specifications
-
-1. Update values in `terraform.tfvars`:
-```hcl
-k3s_vms = {
-  control_01 = {
-    vm_id      = 210
-    name       = "k3s-main-tf-01"
-    cores      = 4        # Changed from 2
-    memory     = 8192     # Changed from 4096
-    ip_address = "192.168.1.210"
-    role       = "control"
-  }
-}
-```
-
-2. Run `terraform plan` to review changes
-3. Run `terraform apply` - VM will be updated (may require restart)
-
-### Changing Network Configuration
-
-1. Update network object in `terraform.tfvars`:
-```hcl
-network = {
-  gateway     = "192.168.1.1"
-  cidr_suffix = "/24"
-}
-
-k3s_vms = {
-  control_01 = {
-    # ... other values ...
-    ip_address = "192.168.1.215"  # New IP (following VM ID convention)
-    vm_id      = 215  # Must update both
-  }
-}
-```
-
-2. This will recreate VMs (destructive change)
-3. Consider using Ansible for IP changes on existing VMs
-
-### IP Addressing Convention
-
-When adding VMs, follow the convention: **last octet = VM ID**
-
-```hcl
-vm_id = 210  →  ip_address = "192.168.1.210"
-vm_id = 211  →  ip_address = "192.168.1.211"
-vm_id = 215  →  ip_address = "192.168.1.215"
-```
-
-This makes infrastructure predictable and easier to manage.
-
-**Reserved Ranges:**
-- 192.168.1.210-213: K3s VMs (Terraform)
-- 192.168.1.249-253: Infrastructure devices
-
-### Changing Proxmox Connection
-
-1. Update proxmox object in `terraform.tfvars`:
-```hcl
-proxmox = {
-  endpoint = "https://192.168.1.250:8006"
-  node     = "msi-proxmox"
-  insecure = true
-  ssh_user = "root"
-}
-```
-
-2. Run `terraform plan` to verify connection
-
-### Updating VM Defaults
-
-1. Modify vm_defaults in `terraform.tfvars`:
-```hcl
-vm_defaults = {
-  disk_interface = "scsi0"
-  disk_size      = 25  # Increased disk size
-  qemu_agent = {
-    enabled = true
-    timeout = "20m"  # Increased timeout
-  }
-  behavior = {
-    on_boot         = true
-    started         = true
-    stop_on_destroy = true
-  }
-}
-```
-
-2. Apply changes - affects all VMs using defaults
-
-### Scaling the Cluster
-
-**Adding nodes:**
-- Add entries to `k3s_vms` map in terraform.tfvars
-- Run `terraform apply`
-- New VMs will be created without affecting existing ones
-
-**Removing nodes:**
-- Remove entries from `k3s_vms` map
-- Run `terraform apply`
-- VMs will be destroyed (ensure data is backed up)
-
-## Integration Points
-
-This is yet to be implinmented and will be part fo future work. It may not take the form outlined below so please treat this with a grain of salt as it may not be in place or implimented in this manner.
-
-
-### With Ansible
-
-**Export inventory:**
-```bash
-# JSON format for dynamic inventory
-terraform output -json ansible_inventory_json > ansible/inventory/terraform.json
-
-# INI format for static inventory
-terraform output -raw ansible_inventory_ini > ansible/inventory/hosts.ini
-```
-
-**Use outputs in Ansible:**
-- Control plane IPs: `terraform output -json control_plane_ips`
-- Worker node IPs: `terraform output -json worker_node_ips`
-- VM details: `terraform output -json vm_network_details`
-
-### With K3s Installation
-
-**Workflow for K3s Setup:**
-1. Terraform provisions 4 VMs (1 control, 3 worker)
-2. Wait for VMs to be fully booted
-3. Export inventory for Ansible
-4. Ansible installs K3s on control node
-5. Ansible joins worker VMs to cluster
-
-**HA Control Plane Installation Example:**
-
-```bash
-# Apply Terraform
-terraform apply -auto-approve
-
-# Export inventory
-terraform output -raw ansible_inventory_ini > ../ansible/hosts.ini
-
-# Install K3s
-cd ../ansible
-ansible-playbook k3s-install.yml
-```
-
-**K3s Installation Steps (via Ansible):**
-
-*Control Node (k3s-main-tf-01):*
-```bash
-curl -sfL https://get.k3s.io | sh -s - server \
-  --tls-san=192.168.1.210
-```
-
-*Worker Nodes:*
-```bash
-curl -sfL https://get.k3s.io | K3S_URL=https://192.168.1.210:6443 \
-  K3S_TOKEN=xxx sh -s - agent
-```
-
-**Verifying Cluster:**
-```bash
-# From control node
-kubectl get nodes
-# Should show 1 control-plane node + 3 worker nodes
-```
-
 ### With MikroTik Network
 
-**A completly seperate repository manages all Miktrotick configuration via IaC and Terraform.
+**A completely separate repository manages all MikroTik configuration via IaC and Terraform.
 
 - VMs are on the **lab network** (192.168.1.x), not ISP network
 - MikroTik (192.168.1.1) provides routing and gateway
@@ -539,10 +348,10 @@ kubectl get nodes
 ❌ **Creating duplicate resource blocks instead of using `for_each`**
 ❌ **Using decorative comment borders**
 ❌ **Modifying VMs manually in Proxmox UI (state drift)**
-❌ **Forgetting to update terraform.tfvars when changing infrastructure**
+❌ **Forgetting to update `terraform.tfvars` when changing infrastructure**
 ❌ **Using inline values instead of variables in resources**
 ❌ **Not using `terraform plan` before `apply`**
-❌ **Committing terraform.tfvars to version control (contains secrets)**
+❌ **Committing `terraform.tfvars` to version control (contains secrets)**
 
 ## Terraform Best Practices
 

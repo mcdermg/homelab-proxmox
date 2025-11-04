@@ -10,8 +10,15 @@ repos:
     - id: terraform_fmt
     - id: terraform_validate
     - id: terraform_tflint
+      name: terraform_tflint_root
       args:
         - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
+      exclude: ^modules/
+    - id: terraform_tflint
+      name: terraform_tflint_modules
+      args:
+        - --args=--config=__GIT_WORKING_DIR__/.tflint-modules.hcl
+      files: ^modules/
     - id: terraform_docs
       args:
         - --hook-config=--path-to-file=README.md
