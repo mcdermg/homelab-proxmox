@@ -1,0 +1,20 @@
+# This is an auto generated file, please use Terraform and do not make manual changes
+
+[proxmox]
+${proxmox_node} ansible_host=${proxmox_host}
+
+[proxmox:vars]
+ansible_user=${proxmox_ssh_user}
+ansible_port=${proxmox_ssh_port}
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+pm_api_host=${proxmox_host}
+pm_api_user=${proxmox_api_user}
+pm_api_password=${proxmox_api_password}
+pm_node=${proxmox_node}
+
+# Container IDs for pct operations
+postgres_ctid=${postgres_ctid}
+postgres_ip=${postgres_ip}
+
+gitea_ctid=${gitea_ctid}
+gitea_ip=${gitea_ip}

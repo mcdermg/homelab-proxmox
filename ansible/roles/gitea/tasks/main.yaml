@@ -1,0 +1,70 @@
+---
+# roles/gitea/tasks/main.yaml
+- name: Wait for postgres container to complete firstboot and all reboots
+  ansible.builtin.shell:
+    cmd: "pct exec {{ postgres_ctid }} -- stat -c %s /etc/inithooks.conf"
+  register: inithooks_size
+  until: inithooks_size.stdout | int <= 1
+  retries: 120  # 20 minutes for updates + reboots
+  delay: 10
+  become: true
+  changed_when: false
+
+- name: Verify container has stable uptime (not mid-reboot)
+  ansible.builtin.command:
+    cmd: "pct exec {{ postgres_ctid }} -- awk '{print int($1)}' /proc/uptime"
+  register: container_uptime
+  until: container_uptime.stdout | int > 60
+  retries: 30
+  delay: 10
+  become: true
+  changed_when: false
+
+- name: Wait for PostgreSQL service to be ready
+  ansible.builtin.wait_for:
+    host: "{{ postgres_ip }}"
+    port: 5432
+    timeout: 300
+  become: true
+
+- name: Verify gitea database exists and is accessible
+  ansible.builtin.shell:
+    cmd: "pct exec {{ postgres_ctid }} -- su - postgres -c \"psql -d gitea -c 'SELECT 1'\""
+  register: db_test
+  until: db_test.rc == 0
+  retries: 10
+  delay: 5
+  become: true
+  changed_when: false
+
+- name: Mount gitea container for file operations
+  ansible.builtin.command:
+    cmd: "pct mount {{ gitea_ctid }}"
+  become: true
+  changed_when: false
+
+- name: Create gitea init script in firstboot hooks
+  ansible.builtin.copy:
+    src: gitea-init.sh
+    dest: "/var/lib/lxc/{{ gitea_ctid }}/rootfs/usr/lib/inithooks/firstboot.d/99custom-gitea-init"
+    mode: '0755'
+    owner: 100000
+    group: 100000
+  become: true
+  notify: Start gitea container
+
+- name: Configure gitea inithooks.conf
+  ansible.builtin.template:
+    src: inithooks.conf.j2
+    dest: "/var/lib/lxc/{{ gitea_ctid }}/rootfs/etc/inithooks.conf"
+    mode: '0644'
+    owner: 100000
+    group: 100000
+  become: true
+  notify: Start gitea container
+
+- name: Unmount gitea container
+  ansible.builtin.command:
+    cmd: "pct unmount {{ gitea_ctid }}"
+  become: true
+  changed_when: false

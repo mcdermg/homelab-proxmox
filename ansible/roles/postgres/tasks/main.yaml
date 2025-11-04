@@ -1,0 +1,33 @@
+---
+# roles/postgres/tasks/main.yaml
+- name: Mount postgres container for file operations
+  ansible.builtin.command:
+    cmd: "pct mount {{ postgres_ctid }}"
+  become: true
+  changed_when: false
+
+- name: Configure postgres inithooks.conf
+  ansible.builtin.template:
+    src: inithooks.conf.j2
+    dest: "/var/lib/lxc/{{ postgres_ctid }}/rootfs/etc/inithooks.conf"
+    mode: '0644'
+    owner: 100000
+    group: 100000
+  become: true
+  notify: Start postgres container
+
+- name: Create postgres init script in firstboot hooks
+  ansible.builtin.copy:
+    src: postgres-init.sh
+    dest: "/var/lib/lxc/{{ postgres_ctid }}/rootfs/usr/lib/inithooks/firstboot.d/99custom-postgres-init"
+    mode: '0755'
+    owner: 100000
+    group: 100000
+  become: true
+  notify: Start postgres container
+
+- name: Unmount postgres container
+  ansible.builtin.command:
+    cmd: "pct unmount {{ postgres_ctid }}"
+  become: true
+  changed_when: false

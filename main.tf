@@ -124,3 +124,27 @@ module "lxc_containers" {
     module.k3s_cluster,
   ]
 }
+
+resource "local_file" "ansible_hosts_file" {
+  count = contains(keys(var.lxc_containers), "postgres") && contains(keys(var.lxc_containers), "gitea") ? 1 : 0
+
+  content = templatefile("${path.module}/templates/ansible_hosts.ini.tftpl", {
+    # Proxmox host connection details
+    proxmox_node         = var.proxmox.node
+    proxmox_host         = replace(replace(var.proxmox.endpoint, "https://", ""), ":8006", "")
+    proxmox_ssh_user     = var.proxmox.ssh_user
+    proxmox_ssh_port     = var.proxmox.ssh_port
+    proxmox_api_user     = var.proxmox_auth.username
+    proxmox_api_password = var.proxmox_auth.password
+
+    # Container details for pct operations
+    postgres_ctid = var.lxc_containers.postgres.vm_id
+    postgres_ip   = var.lxc_containers.postgres.ip_address
+    gitea_ctid    = var.lxc_containers.gitea.vm_id
+    gitea_ip      = var.lxc_containers.gitea.ip_address
+  })
+  filename = "${path.module}/ansible/hosts.ini"
+  depends_on = [
+    module.lxc_containers,
+  ]
+}

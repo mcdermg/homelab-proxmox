@@ -1,0 +1,10 @@
+---
+# roles/gitea/handlers/main.yaml
+- name: Start gitea container
+  community.proxmox.proxmox:
+    api_host: "{{ pm_api_host }}"
+    api_user: "{{ pm_api_user }}"
+    api_password: "{{ pm_api_password }}"
+    node: "{{ pm_node }}"
+    vmid: "{{ gitea_ctid }}"
+    state: started
