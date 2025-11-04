@@ -1,0 +1,39 @@
+---
+# Main playbook for LXC container configuration via Proxmox host
+# This playbook configures stopped TurnKey LXC containers by:
+# 1. Mounting container filesystem with pct
+# 2. Copying init scripts to firstboot hooks
+# 3. Configuring inithooks.conf
+# 4. Unmounting container
+# 5. Starting container (handlers)
+
+- name: Configure LXC containers via Proxmox host
+  hosts: proxmox
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Verify required variables are defined
+      ansible.builtin.assert:
+        that:
+          - postgres_ctid is defined
+          - gitea_ctid is defined
+          - postgres_ip is defined
+          - gitea_ip is defined
+        fail_msg: "Required container variables not defined in inventory"
+
+- name: Configure PostgreSQL container
+  hosts: proxmox
+  gather_facts: false
+  roles:
+    - postgres
+
+  post_tasks:
+    - name: Force all handlers to run now
+      ansible.builtin.meta: flush_handlers
+
+- name: Configure Gitea container (depends on PostgreSQL)
+  hosts: proxmox
+  gather_facts: false
+  roles:
+    - gitea

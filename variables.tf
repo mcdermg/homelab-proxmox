@@ -6,6 +6,7 @@ variable "proxmox" {
     node     = string
     insecure = bool
     ssh_user = string
+    ssh_port = optional(number, 22)
   })
 }
 
@@ -301,22 +302,22 @@ variable "lxc_containers" {
       ip_address       = "192.168.1.114"
       tags             = []
     }
-    redis = {
-      vm_id            = 115
-      name             = "redis"
-      template_file_id = "debian-11-turnkey-redis_17.1-1_amd64.tar.gz"
-      os_type          = "debian"
-      cores            = 2
-      memory           = 2048
-      disk_size        = 10
-      swap             = 512
-      ip_address       = "192.168.1.115"
-      started          = false
-      features = {
-        nesting = true
-      }
-      tags = ["turnkey"]
-    }
+    #redis = {
+    #  vm_id            = 115
+    #  name             = "redis"
+    #  template_file_id = "debian-11-turnkey-redis_17.1-1_amd64.tar.gz"
+    #  os_type          = "debian"
+    #  cores            = 2
+    #  memory           = 2048
+    #  disk_size        = 10
+    #  swap             = 512
+    #  ip_address       = "192.168.1.115"
+    #  started          = false
+    #  features = {
+    #    nesting = true
+    #  }
+    #  tags = ["turnkey"]
+    #}
     postgres = {
       vm_id            = 116
       name             = "postgres"

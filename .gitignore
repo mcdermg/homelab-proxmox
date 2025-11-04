@@ -41,3 +41,7 @@ modules/**/.terraform.lock.hcl
 *~
 .*.swp
 .*.swo
+
+# Ansible generated inventory files (may contain IPs/config)
+ansible/hosts.ini
+ansible/*.ini
