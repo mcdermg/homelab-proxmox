@@ -32,6 +32,9 @@ terraform.rc
 # Ignore lock file (optional - some teams commit this)
 # .terraform.lock.hcl
 
+# Ignore lock files in reusable modules (modules should not pin versions)
+modules/**/.terraform.lock.hcl
+
 # Vim swap files
 *.swp
 *.swo
