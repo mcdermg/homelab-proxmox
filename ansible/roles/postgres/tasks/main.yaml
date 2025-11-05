@@ -1,10 +1,32 @@
 ---
 # roles/postgres/tasks/main.yaml
+- name: Check if postgres container already configured (inithooks completed)
+  ansible.builtin.shell:
+    cmd: "pct exec {{ postgres_ctid }} -- stat -c %s /etc/inithooks.conf 2>/dev/null || echo 999"
+  register: postgres_inithooks_check
+  become: true
+  changed_when: false
+
+- name: Set postgres configuration status
+  ansible.builtin.set_fact:
+    postgres_needs_config: "{{ postgres_inithooks_check.stdout | int > 1 }}"
+
+- name: Stop postgres container if needs configuration
+  community.proxmox.proxmox:
+    api_host: "{{ pm_api_host }}"
+    api_user: "{{ pm_api_user }}"
+    api_password: "{{ pm_api_password }}"
+    node: "{{ pm_node }}"
+    vmid: "{{ postgres_ctid }}"
+    state: stopped
+  when: postgres_needs_config
+
 - name: Mount postgres container for file operations
   ansible.builtin.command:
     cmd: "pct mount {{ postgres_ctid }}"
   become: true
   changed_when: false
+  when: postgres_needs_config
 
 - name: Configure postgres inithooks.conf
   ansible.builtin.template:
@@ -15,6 +37,7 @@
     group: 100000
   become: true
   notify: Start postgres container
+  when: postgres_needs_config
 
 - name: Create postgres init script in firstboot hooks
   ansible.builtin.copy:
@@ -25,9 +48,11 @@
     group: 100000
   become: true
   notify: Start postgres container
+  when: postgres_needs_config
 
 - name: Unmount postgres container
   ansible.builtin.command:
     cmd: "pct unmount {{ postgres_ctid }}"
   become: true
   changed_when: false
+  when: postgres_needs_config

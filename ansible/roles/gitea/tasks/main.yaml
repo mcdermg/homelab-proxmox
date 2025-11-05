@@ -1,5 +1,16 @@
 ---
 # roles/gitea/tasks/main.yaml
+- name: Check if gitea container already configured (inithooks completed)
+  ansible.builtin.shell:
+    cmd: "pct exec {{ gitea_ctid }} -- stat -c %s /etc/inithooks.conf 2>/dev/null || echo 999"
+  register: gitea_inithooks_check
+  become: true
+  changed_when: false
+
+- name: Set gitea configuration status
+  ansible.builtin.set_fact:
+    gitea_needs_config: "{{ gitea_inithooks_check.stdout | int > 1 }}"
+
 - name: Wait for postgres container to complete firstboot and all reboots
   ansible.builtin.shell:
     cmd: "pct exec {{ postgres_ctid }} -- stat -c %s /etc/inithooks.conf"
@@ -9,6 +20,7 @@
   delay: 10
   become: true
   changed_when: false
+  when: gitea_needs_config
 
 - name: Verify container has stable uptime (not mid-reboot)
   ansible.builtin.command:
@@ -19,6 +31,7 @@
   delay: 10
   become: true
   changed_when: false
+  when: gitea_needs_config
 
 - name: Wait for PostgreSQL service to be ready
   ansible.builtin.wait_for:
@@ -26,6 +39,7 @@
     port: 5432
     timeout: 300
   become: true
+  when: gitea_needs_config
 
 - name: Verify gitea database exists and is accessible
   ansible.builtin.shell:
@@ -36,12 +50,24 @@
   delay: 5
   become: true
   changed_when: false
+  when: gitea_needs_config
+
+- name: Stop gitea container if needs configuration
+  community.proxmox.proxmox:
+    api_host: "{{ pm_api_host }}"
+    api_user: "{{ pm_api_user }}"
+    api_password: "{{ pm_api_password }}"
+    node: "{{ pm_node }}"
+    vmid: "{{ gitea_ctid }}"
+    state: stopped
+  when: gitea_needs_config
 
 - name: Mount gitea container for file operations
   ansible.builtin.command:
     cmd: "pct mount {{ gitea_ctid }}"
   become: true
   changed_when: false
+  when: gitea_needs_config
 
 - name: Create gitea init script in firstboot hooks
   ansible.builtin.copy:
@@ -52,6 +78,7 @@
     group: 100000
   become: true
   notify: Start gitea container
+  when: gitea_needs_config
 
 - name: Configure gitea inithooks.conf
   ansible.builtin.template:
@@ -62,9 +89,21 @@
     group: 100000
   become: true
   notify: Start gitea container
+  when: gitea_needs_config
+
+- name: Create ansible configuration marker
+  ansible.builtin.copy:
+    content: "Configured by Ansible"
+    dest: "/var/lib/lxc/{{ gitea_ctid }}/rootfs/root/.ansible_configured"
+    mode: '0644'
+    owner: 100000
+    group: 100000
+  become: true
+  when: gitea_needs_config
 
 - name: Unmount gitea container
   ansible.builtin.command:
     cmd: "pct unmount {{ gitea_ctid }}"
   become: true
   changed_when: false
+  when: gitea_needs_config
