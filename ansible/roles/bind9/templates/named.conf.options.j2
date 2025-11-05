@@ -1,0 +1,34 @@
+// BIND9 Options Configuration for homelab.local
+// Managed by Ansible - Do not edit manually
+
+acl internal {
+    127.0.0.1;
+    192.168.0.0/24;  // ISP network
+    192.168.1.0/24;  // MikroTik homelab network
+};
+
+options {
+    directory "/var/cache/bind";
+
+    // Listen on all interfaces
+    listen-on { any; };
+    listen-on-v6 { any; };
+
+    // Allow queries from homelab network
+    allow-query { internal; };
+
+    // Forward to Cloudflare and Google DNS
+    forwarders {
+        1.1.1.1;
+        8.8.8.8;
+    };
+
+    // Enable recursion for local clients
+    recursion yes;
+    allow-recursion { internal; };
+
+    // Security
+    allow-transfer { none; };
+    dnssec-validation auto;
+    auth-nxdomain no;
+};

@@ -1,0 +1,33 @@
+; Reverse zone file for 192.168.1.0/24
+; Managed by Ansible - Do not edit manually
+
+$TTL    1h
+$ORIGIN 1.168.192.in-addr.arpa.
+
+; Start of Authority
+@       IN      SOA     ns.homelab.local. admin.homelab.local. (
+                        {{ ansible_date_time.epoch }}  ; Serial (Unix timestamp)
+                        12h                             ; Refresh
+                        15m                             ; Retry
+                        3w                              ; Expire
+                        1h                              ; Negative Cache TTL
+                        )
+
+; Name Server
+        IN      NS      ns.homelab.local.
+
+; PTR Records (reverse DNS lookups)
+; Format: last octet IN PTR hostname.homelab.local.
+
+; Infrastructure
+250     IN      PTR     proxmox.homelab.local.
+
+; LXC Containers
+115     IN      PTR     bind9.homelab.local.
+115     IN      PTR     ns.homelab.local.
+116     IN      PTR     postgres.homelab.local.
+117     IN      PTR     gitea.homelab.local.
+
+; Kubernetes Services
+11      IN      PTR     k8status.homelab.local.
+12      IN      PTR     nginx.homelab.local.
