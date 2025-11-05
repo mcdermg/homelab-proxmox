@@ -1,0 +1,17 @@
+// BIND9 Zone Configuration for homelab.local
+// Managed by Ansible - Do not edit manually
+// Network: 192.168.1.0/24
+
+// Forward zone for homelab.local
+zone "homelab.local" {
+    type master;
+    file "/etc/bind/zones/db.homelab.local";
+    allow-update { none; };
+};
+
+// Reverse zone for 192.168.1.0/24
+zone "1.168.192.in-addr.arpa" {
+    type master;
+    file "/etc/bind/zones/db.1.168.192.in-addr.arpa";
+    allow-update { none; };
+};

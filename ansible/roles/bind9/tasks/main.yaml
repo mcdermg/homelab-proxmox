@@ -1,0 +1,118 @@
+---
+# roles/bind9/tasks/main.yaml
+- name: Check if bind9 container already configured (inithooks completed)
+  ansible.builtin.shell:
+    cmd: "pct exec {{ bind9_ctid }} -- stat -c %s /etc/inithooks.conf 2>/dev/null || echo 999"
+  register: bind9_inithooks_check
+  become: true
+  changed_when: false
+
+- name: Set bind9 configuration status
+  ansible.builtin.set_fact:
+    bind9_needs_config: "{{ bind9_inithooks_check.stdout | int > 1 }}"
+
+- name: Stop bind9 container if needs configuration
+  community.proxmox.proxmox:
+    api_host: "{{ pm_api_host }}"
+    api_user: "{{ pm_api_user }}"
+    api_password: "{{ pm_api_password }}"
+    node: "{{ pm_node }}"
+    vmid: "{{ bind9_ctid }}"
+    state: stopped
+  when: bind9_needs_config
+
+- name: Mount bind9 container for file operations
+  ansible.builtin.command:
+    cmd: "pct mount {{ bind9_ctid }}"
+  become: true
+  changed_when: false
+  when: bind9_needs_config
+
+- name: Create bind9 init script in firstboot hooks
+  ansible.builtin.copy:
+    src: bind9-init.sh
+    dest: "/var/lib/lxc/{{ bind9_ctid }}/rootfs/usr/lib/inithooks/firstboot.d/99custom-bind9-init"
+    mode: '0755'
+    owner: 100000
+    group: 100000
+  become: true
+  notify: Start bind9 container
+  when: bind9_needs_config
+
+- name: Configure bind9 inithooks.conf
+  ansible.builtin.template:
+    src: inithooks.conf.j2
+    dest: "/var/lib/lxc/{{ bind9_ctid }}/rootfs/etc/inithooks.conf"
+    mode: '0644'
+    owner: 100000
+    group: 100000
+  become: true
+  notify: Start bind9 container
+  when: bind9_needs_config
+
+- name: Create zones directory
+  ansible.builtin.file:
+    path: "/var/lib/lxc/{{ bind9_ctid }}/rootfs/etc/bind/zones"
+    state: directory
+    mode: '0755'
+    owner: 100000
+    group: 100000
+  become: true
+  when: bind9_needs_config
+
+- name: Deploy named.conf.options configuration
+  ansible.builtin.template:
+    src: named.conf.options.j2
+    dest: "/var/lib/lxc/{{ bind9_ctid }}/rootfs/etc/bind/named.conf.options"
+    mode: '0644'
+    owner: 100000
+    group: 100000
+  become: true
+  when: bind9_needs_config
+
+- name: Deploy named.conf.local zone configuration
+  ansible.builtin.template:
+    src: named.conf.j2
+    dest: "/var/lib/lxc/{{ bind9_ctid }}/rootfs/etc/bind/named.conf.local"
+    mode: '0644'
+    owner: 100000
+    group: 100000
+  become: true
+  when: bind9_needs_config
+
+- name: Deploy forward zone file (db.homelab.local)
+  ansible.builtin.template:
+    src: db.homelab.local.j2
+    dest: "/var/lib/lxc/{{ bind9_ctid }}/rootfs/etc/bind/zones/db.homelab.local"
+    mode: '0644'
+    owner: 100000
+    group: 100000
+  become: true
+  when: bind9_needs_config
+
+- name: Deploy reverse zone file (db.1.168.192.in-addr.arpa)
+  ansible.builtin.template:
+    src: db.1.168.192.in-addr.arpa.j2
+    dest: "/var/lib/lxc/{{ bind9_ctid }}/rootfs/etc/bind/zones/db.1.168.192.in-addr.arpa"
+    mode: '0644'
+    owner: 100000
+    group: 100000
+  become: true
+  when: bind9_needs_config
+
+- name: Create ansible configuration marker
+  ansible.builtin.copy:
+    content: "Configured by Ansible"
+    dest: "/var/lib/lxc/{{ bind9_ctid }}/rootfs/root/.ansible_configured"
+    mode: '0644'
+    owner: 100000
+    group: 100000
+  become: true
+  when: bind9_needs_config
+
+- name: Unmount bind9 container
+  ansible.builtin.command:
+    cmd: "pct unmount {{ bind9_ctid }}"
+  become: true
+  changed_when: false
+  when: bind9_needs_config

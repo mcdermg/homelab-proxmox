@@ -1,0 +1,38 @@
+; Forward zone file for homelab.local
+; Managed by Ansible - Do not edit manually
+
+$TTL    1h
+$ORIGIN homelab.local.
+
+; Start of Authority RR defining the key characteristics of the zone
+@       IN      SOA     ns.homelab.local. admin.homelab.local. (
+                        {{ ansible_date_time.epoch }}  ; Serial (Unix timestamp)
+                        12h                             ; Refresh
+                        15m                             ; Retry
+                        3w                              ; Expire
+                        1h                              ; Negative Cache TTL
+                        )
+
+; Name Server
+        IN      NS      ns.homelab.local.
+
+; DNS Server
+ns      IN      A       192.168.1.115
+
+; Infrastructure
+proxmox IN      A       192.168.1.250
+
+; LXC Containers
+bind9   IN      A       192.168.1.115
+postgres IN     A       192.168.1.116
+gitea   IN      A       192.168.1.117
+
+; Kubernetes Services (LoadBalancer IPs)
+k8status IN     A       192.168.1.11
+nginx   IN      A       192.168.1.12
+
+; Aliases
+dns     IN      CNAME   ns.homelab.local.
+pve     IN      CNAME   proxmox.homelab.local.
+git     IN      CNAME   gitea.homelab.local.
+db      IN      CNAME   postgres.homelab.local.

@@ -91,6 +91,9 @@ variable "lxc_template_downloads" {
     turnkey_debian_11_redis = {
       url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-11-turnkey-redis_17.1-1_amd64.tar.gz"
     }
+    turnkey_debian_12_core = {
+      url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-12-turnkey-core_18.0-1_amd64.tar.gz"
+    }
   }
 }
 
@@ -301,6 +304,22 @@ variable "lxc_containers" {
       disk_size        = 20
       ip_address       = "192.168.1.114"
       tags             = []
+    }
+    bind9 = {
+      vm_id            = 115
+      name             = "bind9"
+      template_file_id = "debian-12-turnkey-core_18.0-1_amd64.tar.gz"
+      os_type          = "debian"
+      cores            = 2
+      memory           = 2048
+      disk_size        = 10
+      swap             = 512
+      ip_address       = "192.168.1.115"
+      started          = false
+      features = {
+        nesting = true
+      }
+      tags = ["turnkey"]
     }
     #redis = {
     #  vm_id            = 115

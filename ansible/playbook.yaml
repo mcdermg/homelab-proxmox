@@ -18,8 +18,10 @@
         that:
           - postgres_ctid is defined
           - gitea_ctid is defined
+          - bind9_ctid is defined
           - postgres_ip is defined
           - gitea_ip is defined
+          - bind9_ip is defined
         fail_msg: "Required container variables not defined in inventory"
 
 - name: Configure PostgreSQL container
@@ -37,3 +39,59 @@
   gather_facts: false
   roles:
     - gitea
+
+- name: Configure Bind9 container
+  hosts: proxmox
+  gather_facts: true
+  roles:
+    - bind9
+
+  post_tasks:
+    - name: Force all handlers to run now
+      ansible.builtin.meta: flush_handlers
+
+    - name: Wait for BIND9 installation to complete
+      ansible.builtin.shell:
+        cmd: "pct exec {{ bind9_ctid }} -- test -f /var/lib/inithooks/.99custom-bind9-init.done"
+      register: bind9_install_check
+      until: bind9_install_check.rc == 0
+      retries: 60
+      delay: 10
+      become: true
+      changed_when: false
+
+    - name: Wait for BIND9 service to be active
+      ansible.builtin.shell:
+        cmd: "pct exec {{ bind9_ctid }} -- systemctl is-active named"
+      register: bind9_service_check
+      until: bind9_service_check.stdout == "active"
+      retries: 10
+      delay: 5
+      become: true
+      changed_when: false
+
+    - name: Verify DNS forward lookup
+      ansible.builtin.command:
+        cmd: "nslookup gitea.homelab.local {{ bind9_ip }}"
+      register: dns_forward_check
+      failed_when: "'192.168.1.117' not in dns_forward_check.stdout"
+      changed_when: false
+
+    - name: Verify DNS reverse lookup
+      ansible.builtin.command:
+        cmd: "nslookup 192.168.1.117 {{ bind9_ip }}"
+      register: dns_reverse_check
+      failed_when: "'gitea.homelab.local' not in dns_reverse_check.stdout"
+      changed_when: false
+
+    - name: Display BIND9 setup completion
+      ansible.builtin.debug:
+        msg:
+          - "================================"
+          - "BIND9 DNS server is ready!"
+          - "DNS Server: {{ bind9_ip }}"
+          - "Test from any host: nslookup gitea.homelab.local {{ bind9_ip }}"
+          - "================================"
+          - "Forward lookup: gitea.homelab.local → 192.168.1.117 ✓"
+          - "Reverse lookup: 192.168.1.117 → gitea.homelab.local ✓"
+          - "================================"
