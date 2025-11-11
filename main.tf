@@ -144,6 +144,9 @@ resource "local_file" "ansible_hosts_file" {
     gitea_ip      = var.lxc_containers.gitea.ip_address
     bind9_ctid    = var.lxc_containers.bind9.vm_id
     bind9_ip      = var.lxc_containers.bind9.ip_address
+
+    # LXC defaults
+    lxc_root_password = var.lxc_defaults.password
   })
   filename = "${path.module}/ansible/hosts.ini"
   depends_on = [
