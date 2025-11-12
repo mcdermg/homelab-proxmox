@@ -10,6 +10,14 @@ terraform {
       source  = "hashicorp/local"
       version = "~> 2.5"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
   }
 }
 
@@ -30,4 +38,8 @@ provider "proxmox" {
     agent    = true
     username = var.proxmox.ssh_user
   }
+}
+
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
 }

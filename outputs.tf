@@ -61,3 +61,21 @@
 #  value       = module.k3s_cluster.vm_ipv4_addresses
 #}
 #
+
+#output "tunnel_id" {
+#  description = "Tunnel ID"
+#  value       = cloudflare_tunnel.cloudflare_zero_trust_tunnel_cloudflared.id
+#  sensitive   = true
+#}
+#
+#output "tunnel_token" {
+#  description = "Tunnel token"
+#  value       = cloudflare_tunnel.cloudflare_zero_trust_tunnel_cloudflared.tunnel_token
+#  sensitive   = true
+#}
+#
+#output "tunnel_cname" {
+#  description = "Tunnel CNAME"
+#  value       = cloudflare_tunnel.cloudflare_zero_trust_tunnel_cloudflared.cname
+#}
+#
