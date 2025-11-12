@@ -283,27 +283,37 @@ variable "lxc_containers" {
     tags = optional(list(string), [])
   }))
   default = {
-    alpine = {
+    cloudflared = {
       vm_id            = 113
-      name             = "alpine"
+      name             = "cloudflared"
       template_file_id = "alpine-3.22-default_20250617_amd64.tar.xz"
       os_type          = "alpine"
       cores            = 1
       memory           = 512
-      disk_size        = 8
+      disk_size        = 4
+      swap             = 128
       ip_address       = "192.168.1.113"
-      tags             = []
+      started          = false
+      features = {
+        nesting = false
+      }
+      tags = ["alpine"]
     }
-    debian = {
+    caddy = {
       vm_id            = 114
-      name             = "debian"
-      template_file_id = "debian-13-standard_13.1-2_amd64.tar.zst"
-      os_type          = "debian"
-      cores            = 2
-      memory           = 2048
-      disk_size        = 20
+      name             = "caddy"
+      template_file_id = "alpine-3.22-default_20250617_amd64.tar.xz"
+      os_type          = "alpine"
+      cores            = 1
+      memory           = 1024
+      disk_size        = 8
+      swap             = 256
       ip_address       = "192.168.1.114"
-      tags             = []
+      started          = false
+      features = {
+        nesting = false
+      }
+      tags = ["alpine"]
     }
     bind9 = {
       vm_id            = 115
@@ -321,22 +331,6 @@ variable "lxc_containers" {
       }
       tags = ["turnkey"]
     }
-    #redis = {
-    #  vm_id            = 115
-    #  name             = "redis"
-    #  template_file_id = "debian-11-turnkey-redis_17.1-1_amd64.tar.gz"
-    #  os_type          = "debian"
-    #  cores            = 2
-    #  memory           = 2048
-    #  disk_size        = 10
-    #  swap             = 512
-    #  ip_address       = "192.168.1.115"
-    #  started          = false
-    #  features = {
-    #    nesting = true
-    #  }
-    #  tags = ["turnkey"]
-    #}
     postgres = {
       vm_id            = 116
       name             = "postgres"
@@ -371,3 +365,34 @@ variable "lxc_containers" {
     }
   }
 }
+
+# CLOUDFLARE CONFIGURATION
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token for managing DNS and tunnels"
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare Zone ID for the domain"
+  type        = string
+}
+
+variable "cloudflare_account_id" {
+  description = "Cloudflare Account ID for tunnel management"
+  type        = string
+}
+
+variable "cloudflare_zone" {
+  description = "Cloudflare zone/domain name"
+  type        = string
+}
+
+# TODO is locals doing all this work?
+#variable "cloudflare_tunnel_services" {
+#  description = "Map of services to expose via Cloudflare Tunnel"
+#  type = map(object({
+#    service = string # e.g., "http://192.168.1.100:8080"
+#  }))
+#  default = {}
+#}
