@@ -91,6 +91,36 @@
   notify: Start gitea container
   when: gitea_needs_config
 
+- name: Ensure .ssh directory exists
+  ansible.builtin.file:
+    path: "/var/lib/lxc/{{ gitea_ctid }}/rootfs/root/.ssh"
+    state: directory
+    mode: '0700'
+    owner: 100000
+    group: 100000
+  become: true
+  when: gitea_needs_config
+
+- name: Add SSH public key to authorized_keys
+  ansible.builtin.copy:
+    src: ~/.ssh/id_rsa.pub
+    dest: "/var/lib/lxc/{{ gitea_ctid }}/rootfs/root/.ssh/authorized_keys"
+    mode: '0600'
+    owner: 100000
+    group: 100000
+  become: true
+  when: gitea_needs_config
+
+- name: Create Ansible remote_tmp directory to prevent permission warnings
+  ansible.builtin.file:
+    path: "/var/lib/lxc/{{ gitea_ctid }}/rootfs/root/.ansible/tmp"
+    state: directory
+    mode: '0700'
+    owner: 100000
+    group: 100000
+  become: true
+  when: gitea_needs_config
+
 - name: Create ansible configuration marker
   ansible.builtin.copy:
     content: "Configured by Ansible"

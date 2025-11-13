@@ -63,19 +63,18 @@
 #
 
 #output "tunnel_id" {
-#  description = "Tunnel ID"
-#  value       = cloudflare_tunnel.cloudflare_zero_trust_tunnel_cloudflared.id
+#  description = "Cloudflare Tunnel ID"
+#  value       = cloudflare_zero_trust_tunnel_cloudflared.homelab.id
 #  sensitive   = true
 #}
 #
 #output "tunnel_token" {
-#  description = "Tunnel token"
-#  value       = cloudflare_tunnel.cloudflare_zero_trust_tunnel_cloudflared.tunnel_token
+#  description = "Cloudflare Tunnel token for cloudflared daemon"
+#  value       = data.cloudflare_zero_trust_tunnel_cloudflared_token.homelab.token
 #  sensitive   = true
 #}
 #
 #output "tunnel_cname" {
-#  description = "Tunnel CNAME"
-#  value       = cloudflare_tunnel.cloudflare_zero_trust_tunnel_cloudflared.cname
+#  description = "Cloudflare Tunnel CNAME target"
+#  value       = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
 #}
-#
