@@ -138,12 +138,18 @@ resource "local_file" "ansible_hosts_file" {
     proxmox_api_password = var.proxmox_auth.password
 
     # Container details for pct operations
-    postgres_ctid = var.lxc_containers.postgres.vm_id
-    postgres_ip   = var.lxc_containers.postgres.ip_address
-    gitea_ctid    = var.lxc_containers.gitea.vm_id
-    gitea_ip      = var.lxc_containers.gitea.ip_address
-    bind9_ctid    = var.lxc_containers.bind9.vm_id
-    bind9_ip      = var.lxc_containers.bind9.ip_address
+    postgres_ctid    = var.lxc_containers.postgres.vm_id
+    postgres_ip      = var.lxc_containers.postgres.ip_address
+    gitea_ctid       = var.lxc_containers.gitea.vm_id
+    gitea_ip         = var.lxc_containers.gitea.ip_address
+    bind9_ctid       = var.lxc_containers.bind9.vm_id
+    bind9_ip         = var.lxc_containers.bind9.ip_address
+    cloudflared_ctid = var.lxc_containers.cloudflared.vm_id
+    cloudflared_ip   = var.lxc_containers.cloudflared.ip_address
+
+    # Cloudflare Tunnel
+    cloudflare_tunnel_id    = cloudflare_zero_trust_tunnel_cloudflared.homelab.id
+    cloudflare_tunnel_token = data.cloudflare_zero_trust_tunnel_cloudflared_token.homelab.token
 
     # LXC defaults
     lxc_root_password = var.lxc_defaults.password
@@ -151,5 +157,7 @@ resource "local_file" "ansible_hosts_file" {
   filename = "${path.module}/ansible/hosts.ini"
   depends_on = [
     module.lxc_containers,
+    cloudflare_zero_trust_tunnel_cloudflared.homelab,
+    data.cloudflare_zero_trust_tunnel_cloudflared_token.homelab,
   ]
 }

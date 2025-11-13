@@ -6,12 +6,13 @@ ${proxmox_node} ansible_host=${proxmox_host}
 [proxmox:vars]
 ansible_user=${proxmox_ssh_user}
 ansible_port=${proxmox_ssh_port}
-ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 pm_api_host=${proxmox_host}
 pm_api_user=${proxmox_api_user}
 pm_api_password=${proxmox_api_password}
 pm_node=${proxmox_node}
 
+# Shared variables available to all hosts
+[all:vars]
 # Container IDs for pct operations
 postgres_ctid=${postgres_ctid}
 postgres_ip=${postgres_ip}
@@ -22,5 +23,21 @@ gitea_ip=${gitea_ip}
 bind9_ctid=${bind9_ctid}
 bind9_ip=${bind9_ip}
 
+cloudflared_ctid=${cloudflared_ctid}
+cloudflared_ip=${cloudflared_ip}
+
+# Cloudflare Tunnel
+cloudflare_tunnel_id=${cloudflare_tunnel_id}
+cloudflare_tunnel_token=${cloudflare_tunnel_token}
+
 # LXC container defaults
 lxc_root_password=${lxc_root_password}
+
+# Direct container access for post-configuration
+[cloudflared_host]
+cloudflared ansible_host=${cloudflared_ip}
+
+[cloudflared_host:vars]
+ansible_user=root
+ansible_password=${lxc_root_password}
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'

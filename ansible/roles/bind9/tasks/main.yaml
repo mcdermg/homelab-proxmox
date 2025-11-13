@@ -50,6 +50,36 @@
   notify: Start bind9 container
   when: bind9_needs_config
 
+- name: Ensure .ssh directory exists
+  ansible.builtin.file:
+    path: "/var/lib/lxc/{{ bind9_ctid }}/rootfs/root/.ssh"
+    state: directory
+    mode: '0700'
+    owner: 100000
+    group: 100000
+  become: true
+  when: bind9_needs_config
+
+- name: Add SSH public key to authorized_keys
+  ansible.builtin.copy:
+    src: ~/.ssh/id_rsa.pub
+    dest: "/var/lib/lxc/{{ bind9_ctid }}/rootfs/root/.ssh/authorized_keys"
+    mode: '0600'
+    owner: 100000
+    group: 100000
+  become: true
+  when: bind9_needs_config
+
+- name: Create Ansible remote_tmp directory to prevent permission warnings
+  ansible.builtin.file:
+    path: "/var/lib/lxc/{{ bind9_ctid }}/rootfs/root/.ansible/tmp"
+    state: directory
+    mode: '0700'
+    owner: 100000
+    group: 100000
+  become: true
+  when: bind9_needs_config
+
 - name: Create zones directory
   ansible.builtin.file:
     path: "/var/lib/lxc/{{ bind9_ctid }}/rootfs/etc/bind/zones"

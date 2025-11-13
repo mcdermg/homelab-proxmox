@@ -286,18 +286,18 @@ variable "lxc_containers" {
     cloudflared = {
       vm_id            = 113
       name             = "cloudflared"
-      template_file_id = "alpine-3.22-default_20250617_amd64.tar.xz"
-      os_type          = "alpine"
+      template_file_id = "debian-12-turnkey-core_18.0-1_amd64.tar.gz"
+      os_type          = "debian"
       cores            = 1
       memory           = 512
-      disk_size        = 4
-      swap             = 128
+      disk_size        = 8
+      swap             = 256
       ip_address       = "192.168.1.113"
       started          = false
       features = {
         nesting = false
       }
-      tags = ["alpine"]
+      tags = ["turnkey"]
     }
     caddy = {
       vm_id            = 114

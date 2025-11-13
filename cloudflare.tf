@@ -1,9 +1,12 @@
 locals {
   tunnel_services = {
-    #"grafana"    = "http://${var.lxc_containers.caddy.ip_address}:80"
-    #"prometheus" = "http://${var.lxc_containers.caddy.ip_address}:80"
-    "gitea"    = "http://${var.lxc_containers.gitea.ip_address}:3000"
-    "postgres" = "http://${var.lxc_containers.postgres.ip_address}:5432"
+    #"gatus"    = "http://192.168.0.62"
+    #"gitea"    = "http://${var.lxc_containers.gitea.ip_address}:80"
+    #"postgres" = "http://${var.lxc_containers.postgres.ip_address}:80"
+    #"speed"    = "http://192.168.1.111:8080"
+    #"k8status" = "http://192.168.1.11:8080"
+    #"nginx"    = "http://192.168.1.12:80"
+    #"argocd"   = "http://192.168.1.13:8080"
   }
 }
 
@@ -15,6 +18,11 @@ resource "cloudflare_zero_trust_tunnel_cloudflared" "homelab" {
   account_id    = var.cloudflare_account_id
   name          = "homelab-tunnel"
   tunnel_secret = random_id.cloudflared_tunnel_secret.b64_std
+}
+
+data "cloudflare_zero_trust_tunnel_cloudflared_token" "homelab" {
+  account_id = var.cloudflare_account_id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.homelab.id
 }
 
 module "tunnel_dns_records" {

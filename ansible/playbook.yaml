@@ -19,9 +19,13 @@
           - postgres_ctid is defined
           - gitea_ctid is defined
           - bind9_ctid is defined
+          - cloudflared_ctid is defined
           - postgres_ip is defined
           - gitea_ip is defined
           - bind9_ip is defined
+          - cloudflared_ip is defined
+          - cloudflare_tunnel_id is defined
+          - cloudflare_tunnel_token is defined
         fail_msg: "Required container variables not defined in inventory"
 
 - name: Configure PostgreSQL container
@@ -94,4 +98,101 @@
           - "================================"
           - "Forward lookup: gitea.homelab.local → 192.168.1.117 ✓"
           - "Reverse lookup: 192.168.1.117 → gitea.homelab.local ✓"
+          - "================================"
+
+- name: Configure cloudflared container via Proxmox
+  hosts: proxmox
+  gather_facts: false
+  roles:
+    - cloudflared
+
+  post_tasks:
+    - name: Force handlers to run (start container)
+      ansible.builtin.meta: flush_handlers
+
+    - name: Wait for cloudflared container SSH to be available
+      ansible.builtin.wait_for:
+        host: "{{ cloudflared_ip }}"
+        port: 22
+        delay: 5
+        timeout: 60
+      delegate_to: localhost
+
+- name: Install and configure cloudflared on container
+  hosts: cloudflared_host
+  gather_facts: true
+
+  tasks:
+    - name: Check if cloudflared is already installed
+      ansible.builtin.command:
+        cmd: which cloudflared
+      register: cloudflared_binary_check
+      changed_when: false
+      failed_when: false
+
+    - name: Check if cloudflared service exists and is active
+      ansible.builtin.systemd:
+        name: cloudflared
+      register: cloudflared_service_check
+      failed_when: false
+
+    - name: Set cloudflared installation status
+      ansible.builtin.set_fact:
+        cloudflared_needs_install: "{{ cloudflared_binary_check.rc != 0 or cloudflared_service_check.status is not defined or cloudflared_service_check.status.ActiveState != 'active' }}"
+
+    - name: Display cloudflared configuration start
+      ansible.builtin.debug:
+        msg:
+          - "================================"
+          - "Starting cloudflared installation..."
+          - "Container IP: {{ ansible_host }}"
+          - "Tunnel ID: {{ cloudflare_tunnel_id }}"
+          - "================================"
+      when: cloudflared_needs_install
+
+    - name: Display cloudflared already configured
+      ansible.builtin.debug:
+        msg:
+          - "================================"
+          - "Cloudflared already installed and running"
+          - "Skipping installation..."
+          - "================================"
+      when: not cloudflared_needs_install
+
+    - name: Download the cloudflared Linux package
+      ansible.builtin.get_url:
+        url: https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+        dest: /tmp/cloudflared-linux-amd64.deb
+        mode: '0644'
+      when: cloudflared_needs_install
+
+    - name: Install cloudflared package
+      ansible.builtin.apt:
+        deb: /tmp/cloudflared-linux-amd64.deb
+        state: present
+      when: cloudflared_needs_install
+
+    - name: Install the tunnel as a systemd service
+      ansible.builtin.command:
+        cmd: cloudflared service install {{ cloudflare_tunnel_token }}
+      args:
+        creates: /etc/systemd/system/cloudflared.service
+      when: cloudflared_needs_install
+
+    - name: Start and enable cloudflared service
+      ansible.builtin.systemd:
+        name: cloudflared
+        state: started
+        enabled: true
+        daemon_reload: true
+      when: cloudflared_needs_install
+
+  post_tasks:
+    - name: Display cloudflared setup completion
+      ansible.builtin.debug:
+        msg:
+          - "================================"
+          - "Cloudflare Tunnel is ready!"
+          - "Container IP: {{ ansible_host }}"
+          - "Tunnel ID: {{ cloudflare_tunnel_id }}"
           - "================================"

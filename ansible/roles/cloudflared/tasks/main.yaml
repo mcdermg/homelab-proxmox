@@ -1,0 +1,77 @@
+---
+# roles/cloudflared/tasks/main.yaml
+- name: Check if cloudflared container already configured (inithooks completed)
+  ansible.builtin.shell:
+    cmd: "pct exec {{ cloudflared_ctid }} -- stat -c %s /etc/inithooks.conf 2>/dev/null || echo 999"
+  register: cloudflared_inithooks_check
+  become: true
+  changed_when: false
+
+- name: Set cloudflared configuration status
+  ansible.builtin.set_fact:
+    cloudflared_needs_config: "{{ cloudflared_inithooks_check.stdout | int > 1 }}"
+
+- name: Stop cloudflared container if needs configuration
+  community.proxmox.proxmox:
+    api_host: "{{ pm_api_host }}"
+    api_user: "{{ pm_api_user }}"
+    api_password: "{{ pm_api_password }}"
+    node: "{{ pm_node }}"
+    vmid: "{{ cloudflared_ctid }}"
+    state: stopped
+  when: cloudflared_needs_config
+
+- name: Mount cloudflared container for file operations
+  ansible.builtin.command:
+    cmd: "pct mount {{ cloudflared_ctid }}"
+  become: true
+  changed_when: false
+  when: cloudflared_needs_config
+
+- name: Configure cloudflared inithooks.conf
+  ansible.builtin.template:
+    src: inithooks.conf.j2
+    dest: "/var/lib/lxc/{{ cloudflared_ctid }}/rootfs/etc/inithooks.conf"
+    mode: '0644'
+    owner: 100000
+    group: 100000
+  become: true
+  notify: Start cloudflared container
+  when: cloudflared_needs_config
+
+- name: Ensure .ssh directory exists
+  ansible.builtin.file:
+    path: "/var/lib/lxc/{{ cloudflared_ctid }}/rootfs/root/.ssh"
+    state: directory
+    mode: '0700'
+    owner: 100000
+    group: 100000
+  become: true
+  when: cloudflared_needs_config
+
+- name: Add SSH public key to authorized_keys
+  ansible.builtin.copy:
+    src: ~/.ssh/id_rsa.pub
+    dest: "/var/lib/lxc/{{ cloudflared_ctid }}/rootfs/root/.ssh/authorized_keys"
+    mode: '0600'
+    owner: 100000
+    group: 100000
+  become: true
+  when: cloudflared_needs_config
+
+- name: Create Ansible remote_tmp directory to prevent permission warnings
+  ansible.builtin.file:
+    path: "/var/lib/lxc/{{ cloudflared_ctid }}/rootfs/root/.ansible/tmp"
+    state: directory
+    mode: '0700'
+    owner: 100000
+    group: 100000
+  become: true
+  when: cloudflared_needs_config
+
+- name: Unmount cloudflared container
+  ansible.builtin.command:
+    cmd: "pct unmount {{ cloudflared_ctid }}"
+  become: true
+  changed_when: false
+  when: cloudflared_needs_config
