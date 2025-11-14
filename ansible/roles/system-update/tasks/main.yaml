@@ -1,0 +1,36 @@
+---
+# roles/system-update/tasks/main.yaml
+- name: Apt Update
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 86400 # One day
+
+- name: Install aptitude
+  ansible.builtin.apt:
+    name: aptitude
+    state: present
+
+- name: Check for upgradeable packages
+  ansible.builtin.apt:
+    upgrade: 'yes'
+  check_mode: true
+  register: upgradeable
+  failed_when: false
+
+# - name: Show Upgradeable packages
+#   ansible.builtin.debug:
+#     msg: "{{ upgradeable.stdout_lines }}"
+#   when: upgradeable.stdout_lines is defined
+
+- name: Update and upgrade apt packages
+  ansible.builtin.apt:
+    upgrade: 'yes'
+    update_cache: true
+    cache_valid_time: 86400 # One day
+  register: upgrade_result
+  failed_when: upgrade_result.failed and 'dpkg was interrupted' not in upgrade_result.msg | default('')
+
+- name: Clean unwanted apt packages
+  ansible.builtin.apt:
+    autoremove: true
+    purge: true

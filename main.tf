@@ -152,7 +152,22 @@ resource "local_file" "ansible_hosts_file" {
     cloudflare_tunnel_token = data.cloudflare_zero_trust_tunnel_cloudflared_token.homelab.token
 
     # LXC defaults
-    lxc_root_password = var.lxc_defaults.password
+    lxc_root_password  = var.lxc_defaults.password
+    lxc_ssh_public_key = var.lxc_defaults.ssh_public_key
+
+    # K3s VM IPs
+    k3s_control_01_ip = var.k3s_vms.control_01.ip_address
+    k3s_control_02_ip = var.k3s_vms.control_02.ip_address
+    k3s_worker_01_ip  = var.k3s_vms.worker_01.ip_address
+    k3s_worker_02_ip  = var.k3s_vms.worker_02.ip_address
+
+    # K3s Raspberry Pi IPs
+    k3s_pi_01_ip = var.k3s_pi_01_ip
+    k3s_pi_02_ip = var.k3s_pi_02_ip
+
+    # VM cloud-init credentials
+    vm_cloudinit_username = var.vm_cloudinit.username
+    vm_cloudinit_password = var.vm_cloudinit.password
   })
   filename = "${path.module}/ansible/hosts.ini"
   depends_on = [

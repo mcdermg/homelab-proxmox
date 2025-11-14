@@ -243,6 +243,17 @@ variable "k3s_vms" {
   }
 }
 
+# K3S RASPBERRY PI NODES
+variable "k3s_pi_01_ip" {
+  description = "IP address for K3s Raspberry Pi control node 01"
+  type        = string
+}
+
+variable "k3s_pi_02_ip" {
+  description = "IP address for K3s Raspberry Pi worker node 01"
+  type        = string
+}
+
 # LXC CONTAINER DEFINITIONS
 variable "lxc_containers" {
   description = "LXC container specifications"
