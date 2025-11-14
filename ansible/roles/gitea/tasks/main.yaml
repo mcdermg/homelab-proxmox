@@ -103,7 +103,7 @@
 
 - name: Add SSH public key to authorized_keys
   ansible.builtin.copy:
-    src: ~/.ssh/id_rsa.pub
+    content: "{{ lxc_ssh_public_key }}\n"
     dest: "/var/lib/lxc/{{ gitea_ctid }}/rootfs/root/.ssh/authorized_keys"
     mode: '0600'
     owner: 100000

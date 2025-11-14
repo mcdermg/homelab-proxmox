@@ -32,6 +32,7 @@ cloudflare_tunnel_token=${cloudflare_tunnel_token}
 
 # LXC container defaults
 lxc_root_password=${lxc_root_password}
+lxc_ssh_public_key=${lxc_ssh_public_key}
 
 # Direct container access for post-configuration
 [cloudflared_host]
@@ -41,3 +42,55 @@ cloudflared ansible_host=${cloudflared_ip}
 ansible_user=root
 ansible_password=${lxc_root_password}
 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+# LXC Containers - Direct access for system updates
+[lxc_containers]
+bind9 ansible_host=${bind9_ip}
+postgres ansible_host=${postgres_ip}
+gitea ansible_host=${gitea_ip}
+cloudflared_update ansible_host=${cloudflared_ip}
+
+[lxc_containers:vars]
+ansible_user=root
+ansible_password=${lxc_root_password}
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+# K3s Cluster VMs
+[k3s_control]
+k3s-control-01 ansible_host=${k3s_control_01_ip}
+k3s-control-02 ansible_host=${k3s_control_02_ip}
+
+[k3s_workers]
+k3s-worker-01 ansible_host=${k3s_worker_01_ip}
+k3s-worker-02 ansible_host=${k3s_worker_02_ip}
+
+[k3s_control:vars]
+ansible_user=${vm_cloudinit_username}
+ansible_password=${vm_cloudinit_password}
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+[k3s_workers:vars]
+ansible_user=${vm_cloudinit_username}
+ansible_password=${vm_cloudinit_password}
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+# K3s Raspberry Pis
+[k3s_pis]
+k3s-pi-01 ansible_host=${k3s_pi_01_ip}
+k3s-pi-02 ansible_host=${k3s_pi_02_ip}
+
+[k3s_pis:vars]
+ansible_user=pi
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+# K3s Cluster - All nodes (VMs + Pis)
+[k3s_cluster:children]
+k3s_control
+k3s_workers
+k3s_pis
+
+# Convenience groups for updating all Debian-based infrastructure
+[debian_hosts:children]
+proxmox
+lxc_containers
+k3s_cluster

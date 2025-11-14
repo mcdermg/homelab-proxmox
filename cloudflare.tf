@@ -2,11 +2,12 @@ locals {
   tunnel_services = {
     #"gatus"    = "http://192.168.0.62"
     #"gitea"    = "http://${var.lxc_containers.gitea.ip_address}:80"
-    #"postgres" = "http://${var.lxc_containers.postgres.ip_address}:80"
+    ##"postgres" = "http://${var.lxc_containers.postgres.ip_address}:80"
     #"speed"    = "http://192.168.1.111:8080"
     #"k8status" = "http://192.168.1.11:8080"
     #"nginx"    = "http://192.168.1.12:80"
     #"argocd"   = "http://192.168.1.13:8080"
+    #"proxmox"  = "https://192.168.1.250:8006"
   }
 }
 
