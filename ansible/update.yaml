@@ -12,7 +12,7 @@
   hosts: debian_hosts
   become: true
   gather_facts: false
-  serial: 4 # Update 4 hosts at a time to reduce Proxmox host resource bottleneck. 2x Pis not part of Proxmox.
+  serial: 3 # Update 3 hosts at a time to reduce Proxmox host resource bottleneck. 2x Pis not part of Proxmox.
 
   roles:
     - system-update
