@@ -190,6 +190,19 @@ variable "lxc_defaults" {
   sensitive = true
 }
 
+# GITEA APPLICATION CREDENTIALS
+variable "gitea_db_password" {
+  description = "Password for Gitea PostgreSQL database user"
+  type        = string
+  sensitive   = true
+}
+
+variable "gitea_admin_password" {
+  description = "Password for Gitea admin user"
+  type        = string
+  sensitive   = true
+}
+
 # K3S CLUSTER CONFIGURATION
 variable "k3s_template_vm_id" {
   description = "VM ID of the template to clone for K3s nodes"
@@ -399,7 +412,7 @@ variable "cloudflare_zone" {
   type        = string
 }
 
-# TODO is locals doing all this work?
+# TODO is locals doing all this work? Should move to tfvars?
 #variable "cloudflare_tunnel_services" {
 #  description = "Map of services to expose via Cloudflare Tunnel"
 #  type = map(object({

@@ -176,3 +176,25 @@ resource "local_file" "ansible_hosts_file" {
     data.cloudflare_zero_trust_tunnel_cloudflared_token.homelab,
   ]
 }
+
+resource "local_file" "postgres_init_script" {
+  count = contains(keys(var.lxc_containers), "postgres") && contains(keys(var.lxc_containers), "gitea") ? 1 : 0
+
+  content = templatefile("${path.module}/templates/postgres-init.sh.tftpl", {
+    gitea_db_password = var.gitea_db_password
+    postgres_ip       = var.lxc_containers.postgres.ip_address
+    gitea_ip          = var.lxc_containers.gitea.ip_address
+  })
+  filename = "${path.module}/ansible/roles/postgres/files/postgres-init.sh"
+}
+
+resource "local_file" "gitea_init_script" {
+  count = contains(keys(var.lxc_containers), "postgres") && contains(keys(var.lxc_containers), "gitea") ? 1 : 0
+
+  content = templatefile("${path.module}/templates/gitea-init.sh.tftpl", {
+    gitea_db_password    = var.gitea_db_password
+    gitea_admin_password = var.gitea_admin_password
+    postgres_ip          = var.lxc_containers.postgres.ip_address
+  })
+  filename = "${path.module}/ansible/roles/gitea/files/gitea-init.sh"
+}
