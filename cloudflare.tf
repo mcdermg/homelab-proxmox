@@ -61,3 +61,28 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "homelab" {
     )
   }
 }
+
+# CLOUDFLARE ACCESS - IP RESTRICTION
+# Protect all tunnel services with IP-based access control
+resource "cloudflare_zero_trust_access_application" "tunnel_services" {
+  for_each = length(var.allowed_ip_addresses) > 0 ? local.tunnel_services : {}
+
+  account_id                = var.cloudflare_account_id
+  name                      = "${each.key} - Homelab"
+  domain                    = "${each.key}.${var.cloudflare_zone}"
+  type                      = "self_hosted"
+  session_duration          = "24h"
+  auto_redirect_to_identity = false
+
+  policies = [{
+    name     = "Allow from allowed IPs"
+    decision = "non_identity"
+    include = [
+      for ip_addr in var.allowed_ip_addresses : {
+        ip = {
+          ip = ip_addr
+        }
+      }
+    ]
+  }]
+}
