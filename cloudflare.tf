@@ -11,6 +11,7 @@ locals {
     { name = "proxmox",  service = "https://192.168.1.250:8006" },
     { name = "pulse",    service = "http://192.168.1.112:7655" },
     { name = "grafana",    service = "http://192.168.1.14" },
+    { name = "prometheus", service = "http://192.168.1.15" },
   ]
   # Derived map for for_each resources (DNS records, access applications) — order irrelevant there
   tunnel_services = { for item in local.tunnel_services_list : item.name => item.service }
