@@ -38,6 +38,25 @@ ansible-playbook update.yaml --limit proxmox    # Proxmox only
 ansible-playbook update.yaml --limit k3s_pis    # Raspberry Pis only
 ```
 
+## Networking
+
+Route not set, device dependednt and will need to run:
+
+```
+sudo ip route del 192.168.1.0/24 via 192.168.0.1 dev enx98e743f1296c                                                           
+sudo ip route del 192.168.1.0/24 via 192.168.0.1 dev wlp59s0
+```
+
+Added a static route already via:
+
+```
+sudo nmcli connection modify "Wired connection 1" +ipv4.routes "192.168.1.0/24 192.168.0.98"                                   
+sudo nmcli connection up "Wired connection 1"
+
+sudo nmcli connection modify "WIFI_SSID" +ipv4.routes "192.168.1.0/24 192.168.0.98"
+sudo nmcli connection up "WIFI_SSID"
+```
+
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
