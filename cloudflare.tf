@@ -12,9 +12,10 @@ locals {
     { name = "pulse",    service = "http://192.168.1.112:7655" },
     { name = "grafana",    service = "http://192.168.1.14" },
   ]
-
   # Derived map for for_each resources (DNS records, access applications) — order irrelevant there
   tunnel_services = { for item in local.tunnel_services_list : item.name => item.service }
+
+  public_services = toset(["gatus"])
 }
 
 resource "random_id" "cloudflared_tunnel_secret" {
@@ -68,10 +69,8 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "homelab" {
   }
 }
 
-# CLOUDFLARE ACCESS - IP RESTRICTION
-# Protect all tunnel services with IP-based access control
 resource "cloudflare_zero_trust_access_application" "tunnel_services" {
-  for_each = length(var.allowed_ip_addresses) > 0 ? local.tunnel_services : {}
+  for_each = length(var.allowed_ip_addresses) > 0 ? { for k, v in local.tunnel_services : k => v if !contains(local.public_services, k) } : {}
 
   account_id                = var.cloudflare_account_id
   name                      = "${each.key} - Homelab"
