@@ -61,7 +61,7 @@ No requirements.
 
 | Name | Version |
 |------|---------|
-| <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | 0.85.1 |
+| <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | 0.107.0 |
 
 ## Modules
 

@@ -412,12 +412,6 @@ variable "cloudflare_zone" {
   type        = string
 }
 
-variable "allowed_ip_addresses" {
-  description = "List of IP addresses allowed to access tunnel services (CIDR notation)"
-  type        = list(string)
-  default     = []
-}
-
 # TODO is locals doing all this work? Should move to tfvars?
 #variable "cloudflare_tunnel_services" {
 #  description = "Map of services to expose via Cloudflare Tunnel"
