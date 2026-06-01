@@ -43,14 +43,14 @@ ansible-playbook update.yaml --limit k3s_pis    # Raspberry Pis only
 Route not set, device dependednt and will need to run:
 
 ```
-sudo ip route del 192.168.1.0/24 via 192.168.0.1 dev enx98e743f1296c                                                           
+sudo ip route del 192.168.1.0/24 via 192.168.0.1 dev enx98e743f1296c
 sudo ip route del 192.168.1.0/24 via 192.168.0.1 dev wlp59s0
 ```
 
 Added a static route already via:
 
 ```
-sudo nmcli connection modify "Wired connection 1" +ipv4.routes "192.168.1.0/24 192.168.0.98"                                   
+sudo nmcli connection modify "Wired connection 1" +ipv4.routes "192.168.1.0/24 192.168.0.98"
 sudo nmcli connection up "Wired connection 1"
 
 sudo nmcli connection modify "WIFI_SSID" +ipv4.routes "192.168.1.0/24 192.168.0.98"
@@ -64,6 +64,7 @@ sudo nmcli connection up "WIFI_SSID"
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | ~> 1.13 |
 | <a name="requirement_cloudflare"></a> [cloudflare](#requirement\_cloudflare) | ~> 5.0 |
+| <a name="requirement_http"></a> [http](#requirement\_http) | ~> 3.0 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | ~> 2.5 |
 | <a name="requirement_proxmox"></a> [proxmox](#requirement\_proxmox) | ~> 0.85 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | ~> 3.6 |
@@ -73,6 +74,7 @@ sudo nmcli connection up "WIFI_SSID"
 | Name | Version |
 |------|---------|
 | <a name="provider_cloudflare"></a> [cloudflare](#provider\_cloudflare) | 5.12.0 |
+| <a name="provider_http"></a> [http](#provider\_http) | 3.6.0 |
 | <a name="provider_local"></a> [local](#provider\_local) | 2.5.3 |
 | <a name="provider_random"></a> [random](#provider\_random) | 3.7.2 |
 
@@ -99,12 +101,13 @@ sudo nmcli connection up "WIFI_SSID"
 | [local_file.postgres_init_script](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file) | resource |
 | [random_id.cloudflared_tunnel_secret](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/id) | resource |
 | [cloudflare_zero_trust_tunnel_cloudflared_token.homelab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/data-sources/zero_trust_tunnel_cloudflared_token) | data source |
+| [http_http.my_ipv4](https://registry.terraform.io/providers/hashicorp/http/latest/docs/data-sources/http) | data source |
+| [http_http.my_ipv6](https://registry.terraform.io/providers/hashicorp/http/latest/docs/data-sources/http) | data source |
 
 ## Inputs
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_allowed_ip_addresses"></a> [allowed\_ip\_addresses](#input\_allowed\_ip\_addresses) | List of IP addresses allowed to access tunnel services (CIDR notation) | `list(string)` | `[]` | no |
 | <a name="input_cloudflare_account_id"></a> [cloudflare\_account\_id](#input\_cloudflare\_account\_id) | Cloudflare Account ID for tunnel management | `string` | n/a | yes |
 | <a name="input_cloudflare_api_token"></a> [cloudflare\_api\_token](#input\_cloudflare\_api\_token) | Cloudflare API token for managing DNS and tunnels | `string` | n/a | yes |
 | <a name="input_cloudflare_zone"></a> [cloudflare\_zone](#input\_cloudflare\_zone) | Cloudflare zone/domain name | `string` | n/a | yes |

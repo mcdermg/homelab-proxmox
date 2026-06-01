@@ -31,16 +31,16 @@ data "http" "my_ipv6" {
 locals {
   # List preserves insertion order — new entries appended here won't reorder the tunnel ingress config
   tunnel_services_list = [
-    { name = "gatus",    service = "http://192.168.0.62" },
-    { name = "gitea",    service = "http://${var.lxc_containers.gitea.ip_address}:80" },
+    { name = "gatus", service = "http://192.168.0.62" },
+    { name = "gitea", service = "http://${var.lxc_containers.gitea.ip_address}:80" },
     { name = "postgres", service = "http://${var.lxc_containers.postgres.ip_address}:80" },
-    { name = "speed",    service = "http://192.168.1.111:8080" },
+    { name = "speed", service = "http://192.168.1.111:8080" },
     { name = "k8status", service = "http://192.168.1.11:80" },
-    { name = "nginx",    service = "http://192.168.1.12:80" },
-    { name = "argocd",   service = "http://192.168.1.13" },
-    { name = "proxmox",  service = "https://192.168.1.250:8006" },
-    { name = "pulse",    service = "http://192.168.1.112:7655" },
-    { name = "grafana",    service = "http://192.168.1.14" },
+    { name = "nginx", service = "http://192.168.1.12:80" },
+    { name = "argocd", service = "http://192.168.1.13" },
+    { name = "proxmox", service = "https://192.168.1.250:8006" },
+    { name = "pulse", service = "http://192.168.1.112:7655" },
+    { name = "grafana", service = "http://192.168.1.14" },
     { name = "prometheus", service = "http://192.168.1.15" },
   ]
   # Derived map for for_each resources (DNS records, access applications) — order irrelevant there
