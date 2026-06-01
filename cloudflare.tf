@@ -5,6 +5,12 @@ data "http" "my_ipv4" {
     max_delay_ms = 2000
     min_delay_ms = 1000
   }
+  lifecycle {
+    postcondition {
+      condition     = self.status_code == 200
+      error_message = "api4.ipify.org returned HTTP ${self.status_code}"
+    }
+  }
 }
 
 data "http" "my_ipv6" {
@@ -13,6 +19,12 @@ data "http" "my_ipv6" {
     attempts     = 3
     max_delay_ms = 2000
     min_delay_ms = 1000
+  }
+  lifecycle {
+    postcondition {
+      condition     = self.status_code == 200
+      error_message = "api6.ipify.org returned HTTP ${self.status_code}"
+    }
   }
 }
 
@@ -36,9 +48,9 @@ locals {
 
   public_services = toset(["gatus"])
 
-  _ipv4             = "${chomp(data.http.my_ipv4.response_body)}/32"
-  _ipv6             = "${join(":", slice(split(":", chomp(data.http.my_ipv6.response_body)), 0, 4))}::/64"
-  allowed_ips       = [local._ipv4, local._ipv6]
+  ipv4        = "${chomp(data.http.my_ipv4.response_body)}/32"
+  ipv6        = "${join(":", slice(split(":", chomp(data.http.my_ipv6.response_body)), 0, 4))}::/64"
+  allowed_ips = [local.ipv4, local.ipv6]
 }
 
 resource "random_id" "cloudflared_tunnel_secret" {
