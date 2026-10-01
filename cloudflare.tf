@@ -14,7 +14,8 @@ data "http" "my_ipv4" {
 }
 
 data "http" "my_ipv6" {
-  url = "https://api6.ipify.org"
+  # api64 returns IPv6 if this machine has it, otherwise IPv4, so runs without IPv6 don't fail
+  url = "https://api64.ipify.org"
   retry {
     attempts     = 3
     max_delay_ms = 2000
@@ -23,7 +24,7 @@ data "http" "my_ipv6" {
   lifecycle {
     postcondition {
       condition     = self.status_code == 200
-      error_message = "api6.ipify.org returned HTTP ${self.status_code}"
+      error_message = "api64.ipify.org returned HTTP ${self.status_code}"
     }
   }
 }
@@ -48,9 +49,13 @@ locals {
 
   public_services = toset(["gatus"])
 
-  ipv4        = "${chomp(data.http.my_ipv4.response_body)}/32"
-  ipv6        = "${join(":", slice(split(":", chomp(data.http.my_ipv6.response_body)), 0, 4))}::/64"
-  allowed_ips = [local.ipv4, local.ipv6]
+  ipv4_addr = chomp(data.http.my_ipv4.response_body)
+  ipv6_addr = chomp(data.http.my_ipv6.response_body)
+
+  ipv4 = "${local.ipv4_addr}/32"
+  # cidrhost(..., 0) returns the /64 network address and handles :: shortcuts; null when no IPv6
+  ipv6        = strcontains(local.ipv6_addr, ":") ? "${cidrhost("${local.ipv6_addr}/64", 0)}/64" : null
+  allowed_ips = compact([local.ipv4, local.ipv6])
 }
 
 resource "random_id" "cloudflared_tunnel_secret" {
