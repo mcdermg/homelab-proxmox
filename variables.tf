@@ -112,12 +112,13 @@ variable "vm_image_downloads" {
     upload_timeout          = optional(number, 1800)
   }))
   default = {
-    #ubuntu_2404_cloud = {
-    #  url                = "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img"
-    #  file_name          = "ubuntu-24.04-cloudimg-amd64.img"
-    #  checksum           = "d2377667ea95222330ca2287817403c85178dd7e5967a071b83a75ef8c28105f"
-    #  checksum_algorithm = "sha256"
-    #}
+    # Pinned release so rebuilds get the same image; .qcow2 name because import storage is picky about extensions
+    ubuntu_2404_cloud = {
+      url                = "https://cloud-images.ubuntu.com/releases/noble/release-20260926/ubuntu-24.04-server-cloudimg-amd64.img"
+      file_name          = "ubuntu-24.04-server-cloudimg-amd64.qcow2"
+      checksum           = "6a81c37564db9b1ee84e141922625e1d7c5b389b99bb3c572e0243607d5bb4d2"
+      checksum_algorithm = "sha256"
+    }
     # debian_12_cloud = {
     #   url       = "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"
     #   file_name = "debian-12-generic-amd64.img"

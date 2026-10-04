@@ -6,6 +6,58 @@ locals {
   }
 }
 
+# K3S VM TEMPLATE
+# Mirrors the hand-built template 9000 (Ubuntu 24.04 cloud image), see LAB-16
+resource "proxmox_virtual_environment_vm" "template" {
+  node_name = var.proxmox_node
+  vm_id     = var.template_vm_id
+
+  template = true
+  on_boot  = false
+  started  = false
+
+  cpu {
+    cores = var.template_cores
+  }
+
+  memory {
+    dedicated = var.template_memory
+  }
+
+  scsi_hardware = "virtio-scsi-pci"
+  boot_order    = ["scsi0"]
+
+  disk {
+    datastore_id = var.template_storage_pool
+    interface    = "scsi0"
+    import_from  = var.template_image_file_id
+    size         = 4 # cloud image is 3.5GB, size is whole GB
+  }
+
+  # Cloud-init drive only, clones set user, keys and IPs
+  initialization {
+    datastore_id = var.template_storage_pool
+  }
+
+  network_device {
+    bridge = var.network_bridge
+  }
+
+  serial_device {}
+
+  vga {
+    type = "serial0"
+  }
+
+  # Only used when creating the template; don't re-import or resize an existing template's base disk
+  lifecycle {
+    ignore_changes = [
+      disk[0].import_from,
+      disk[0].size,
+    ]
+  }
+}
+
 # K3S CLUSTER VMS
 resource "proxmox_virtual_environment_vm" "k3s_nodes" {
   for_each = var.cluster_nodes
@@ -24,7 +76,7 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
 
   # CLONE FROM TEMPLATE
   clone {
-    vm_id = var.template_vm_id
+    vm_id = proxmox_virtual_environment_vm.template.vm_id
     full  = true
   }
 
