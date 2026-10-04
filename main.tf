@@ -2,6 +2,9 @@ locals {
   # Have been playing with storage so leaving these here for now and can move to vars later
   datastore_id = "nvme-files"   # NVMe ZFS pool for ISOs/templates (file storage)
   storage_pool = "nvme-storage" # NVMe ZFS pool for VM/container disks
+
+  # TODO: move template 9000 from local-lvm to local.storage_pool (nvme-storage) after the pve01 rebuild
+  template_storage_pool = "local-lvm"
 }
 
 # DOWNLOADS
@@ -50,6 +53,10 @@ module "k3s_cluster" {
   proxmox_node   = var.proxmox.node
   template_vm_id = var.k3s_template_vm_id
   storage_pool   = local.storage_pool
+
+  # Template
+  template_storage_pool  = local.template_storage_pool
+  template_image_file_id = module.vm_image_downloads.file_ids["ubuntu_2404_cloud"]
 
   # Network config
   network_bridge      = var.network_bridge
