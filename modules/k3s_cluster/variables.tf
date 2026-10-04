@@ -27,6 +27,29 @@ variable "storage_pool" {
   type        = string
 }
 
+# TEMPLATE CONFIGURATION
+variable "template_storage_pool" {
+  description = "The storage pool for the template's disk and cloud-init drive"
+  type        = string
+}
+
+variable "template_image_file_id" {
+  description = "File ID of the cloud image the template disk is imported from (e.g. 'nvme-files:import/image.qcow2')"
+  type        = string
+}
+
+variable "template_cores" {
+  description = "CPU cores for the template"
+  type        = number
+  default     = 2
+}
+
+variable "template_memory" {
+  description = "Memory in MB for the template"
+  type        = number
+  default     = 2048
+}
+
 variable "network_bridge" {
   description = "The network bridge for VM network devices"
   type        = string

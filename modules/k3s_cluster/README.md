@@ -72,6 +72,7 @@ No modules.
 | Name | Type |
 |------|------|
 | [proxmox_virtual_environment_vm.k3s_nodes](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/virtual_environment_vm) | resource |
+| [proxmox_virtual_environment_vm.template](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/virtual_environment_vm) | resource |
 
 ## Inputs
 
@@ -90,6 +91,10 @@ No modules.
 | <a name="input_qemu_agent_enabled"></a> [qemu\_agent\_enabled](#input\_qemu\_agent\_enabled) | Enable QEMU guest agent | `bool` | `false` | no |
 | <a name="input_qemu_agent_timeout"></a> [qemu\_agent\_timeout](#input\_qemu\_agent\_timeout) | QEMU agent timeout | `string` | `"4m"` | no |
 | <a name="input_storage_pool"></a> [storage\_pool](#input\_storage\_pool) | The storage pool for VM disks and cloud-init | `string` | n/a | yes |
+| <a name="input_template_cores"></a> [template\_cores](#input\_template\_cores) | CPU cores for the template | `number` | `2` | no |
+| <a name="input_template_image_file_id"></a> [template\_image\_file\_id](#input\_template\_image\_file\_id) | File ID of the cloud image the template disk is imported from (e.g. 'nvme-files:import/image.qcow2') | `string` | n/a | yes |
+| <a name="input_template_memory"></a> [template\_memory](#input\_template\_memory) | Memory in MB for the template | `number` | `2048` | no |
+| <a name="input_template_storage_pool"></a> [template\_storage\_pool](#input\_template\_storage\_pool) | The storage pool for the template's disk and cloud-init drive | `string` | n/a | yes |
 | <a name="input_template_vm_id"></a> [template\_vm\_id](#input\_template\_vm\_id) | The VM ID of the template to clone from | `number` | n/a | yes |
 | <a name="input_vm_on_boot"></a> [vm\_on\_boot](#input\_vm\_on\_boot) | Start VM on boot | `bool` | `true` | no |
 | <a name="input_vm_started"></a> [vm\_started](#input\_vm\_started) | Start VM after creation | `bool` | `true` | no |
