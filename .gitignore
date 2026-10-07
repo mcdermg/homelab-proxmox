@@ -45,3 +45,7 @@ modules/**/.terraform.lock.hcl
 # Ansible generated inventory files (may contain IPs/config)
 ansible/hosts.ini
 ansible/*.ini
+
+
+# .envrc
+.envrc
