@@ -56,7 +56,7 @@ module "k3s_cluster" {
 
   # Template
   template_storage_pool  = local.template_storage_pool
-  template_image_file_id = module.vm_image_downloads.file_ids["ubuntu_2404_cloud"]
+  template_image_file_id = module.vm_image_downloads.file_ids["debian_13_generic"]
 
   # Network config
   network_bridge      = var.network_bridge

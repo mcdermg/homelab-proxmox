@@ -4,8 +4,9 @@ Terraform + Ansible configuration for Proxmox VE homelab infrastructure includin
 
 ## Infrastructure
 
-**LXC Containers (TurnKey Linux):**
+**LXC Containers (TurnKey Linux, except Caddy on Alpine):**
 - Cloudflared (CT 113) - Cloudflare Tunnel client
+- Caddy (CT 114) - Reverse proxy (not configured yet)
 - Bind9 (CT 115) - DNS server
 - Postgres (CT 116) - Database server
 - Gitea (CT 117) - Git server
@@ -13,12 +14,12 @@ Terraform + Ansible configuration for Proxmox VE homelab infrastructure includin
 **K3s Cluster:**
 - 2 control plane VMs (Proxmox VMs 210-211)
 - 2 worker VMs (Proxmox VMs 215-216)
-- 2 Raspberry Pi nodes (external hardware)
+- 2 Raspberry Pi nodes (external hardware, Pi 4 `.241` and Pi 3 `.242`)
 
 **Services:**
 - Cloudflare Zero Trust Tunnel with automatic DNS records
 - Internal DNS via Bind9
-- SSH key-based authentication across all infrastructure
+- SSH keys are injected into containers and VMs, but the generated Ansible inventory still logs in with passwords for LXCs and k3s VMs
 
 ## Ansible Operations
 
@@ -39,6 +40,25 @@ ansible-playbook update.yaml --limit k3s_pis    # Raspberry Pis only
 ```
 
 ## Networking
+
+### Lab IP Layout
+Layout for `192.168.1.0/24`. The DHCP pool and static leases are managed in [mikrotik-hapac2](https://github.com/mcdermg/mikrotik-hapac2).
+
+| Range | Use |
+|---|---|
+| `.1` | MikroTik |
+| `.2`–`.9` | Network gear (spare) |
+| `.10`–`.49` | k8s LoadBalancer pool (MetalLB) |
+| `.50`–`.99` | DHCP pool |
+| `.100`–`.199` | LXCs (VMID = last octet) |
+| `.200`–`.239` | k3s VMs (VMID = last octet) |
+| `.240`–`.248` | Pis and other physical hosts (Pi 4 `.241`, Pi 3 `.242`) |
+| `.249` | MikroTik ISP monitor container |
+| `.250`–`.252` | Proxmox nodes (pve01 `.250`, pve02 `.251`, spare `.252`) |
+| `.253` | Proxmox QDevice (reserved) |
+| `.254` | TP-Link switch |
+
+### Routes
 
 Route not set, device dependednt and will need to run:
 
@@ -154,7 +174,7 @@ terraform init
 | <a name="input_proxmox"></a> [proxmox](#input\_proxmox) | Proxmox connection configuration | <pre>object({<br>    endpoint = string<br>    node     = string<br>    insecure = bool<br>    ssh_user = string<br>    ssh_port = optional(number, 22)<br>  })</pre> | n/a | yes |
 | <a name="input_proxmox_auth"></a> [proxmox\_auth](#input\_proxmox\_auth) | Proxmox authentication credentials | <pre>object({<br>    api_token    = optional(string, "")<br>    username     = optional(string, "")<br>    password     = optional(string, "")<br>    ssh_password = optional(string, "")<br>  })</pre> | n/a | yes |
 | <a name="input_vm_cloudinit"></a> [vm\_cloudinit](#input\_vm\_cloudinit) | Cloud-init configuration for VMs | <pre>object({<br>    username       = string<br>    password       = string<br>    ssh_public_key = optional(string, "")<br>  })</pre> | n/a | yes |
-| <a name="input_vm_image_downloads"></a> [vm\_image\_downloads](#input\_vm\_image\_downloads) | VM disk images to download to Proxmox storage | <pre>map(object({<br>    url                     = string<br>    file_name               = optional(string)<br>    checksum                = optional(string)<br>    checksum_algorithm      = optional(string) # "md5", "sha1", "sha224", "sha256", "sha384", "sha512"<br>    decompression_algorithm = optional(string) # "gz", "lzo", "zst", "bz2"<br>    verify                  = optional(bool, true)<br>    overwrite               = optional(bool, true)<br>    overwrite_unmanaged     = optional(bool, false)<br>    upload_timeout          = optional(number, 1800)<br>  }))</pre> | <pre>{<br>  "ubuntu_2404_cloud": {<br>    "checksum": "6a81c37564db9b1ee84e141922625e1d7c5b389b99bb3c572e0243607d5bb4d2",<br>    "checksum_algorithm": "sha256",<br>    "file_name": "ubuntu-24.04-server-cloudimg-amd64.qcow2",<br>    "url": "https://cloud-images.ubuntu.com/releases/noble/release-20260926/ubuntu-24.04-server-cloudimg-amd64.img"<br>  }<br>}</pre> | no |
+| <a name="input_vm_image_downloads"></a> [vm\_image\_downloads](#input\_vm\_image\_downloads) | VM disk images to download to Proxmox storage | <pre>map(object({<br>    url                     = string<br>    file_name               = optional(string)<br>    checksum                = optional(string)<br>    checksum_algorithm      = optional(string) # "md5", "sha1", "sha224", "sha256", "sha384", "sha512"<br>    decompression_algorithm = optional(string) # "gz", "lzo", "zst", "bz2"<br>    verify                  = optional(bool, true)<br>    overwrite               = optional(bool, true)<br>    overwrite_unmanaged     = optional(bool, false)<br>    upload_timeout          = optional(number, 1800)<br>  }))</pre> | <pre>{<br>  "debian_13_generic": {<br>    "checksum": "6f0f93335bdef4ccf523c4317cc663ea52ca23b862667785f3d6d186ab4674a937385ccff0c55996b4b2e4c19e440cdf211e2a75ffa2f6548037ab43950c841d",<br>    "checksum_algorithm": "sha512",<br>    "url": "https://cloud.debian.org/images/cloud/trixie/20261001-2618/debian-13-generic-amd64-20261001-2618.qcow2"<br>  }<br>}</pre> | no |
 
 ## Outputs
 
