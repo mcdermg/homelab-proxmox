@@ -57,6 +57,31 @@ sudo nmcli connection modify "WIFI_SSID" +ipv4.routes "192.168.1.0/24 192.168.0.
 sudo nmcli connection up "WIFI_SSID"
 ```
 
+## State Backend (Cloudflare R2)
+
+State is stored remotely in a Cloudflare R2 bucket via Terraform's S3-compatible backend (`backend.tf`):
+
+- **Bucket:** `iac-state`
+- **Key:** `homelab/proxmox/terraform.tfstate`
+- **Locking:** native S3 lockfile (`use_lockfile = true`), no DynamoDB needed
+- **Region:** `auto` with AWS-specific validation checks skipped, as R2 is not AWS
+
+Credentials and the R2 endpoint are not in `backend.tf`. They are supplied as environment variables from a local, gitignored `.envrc` loaded by [direnv](https://direnv.net/):
+
+```bash
+#!/usr/bin/env bash
+export AWS_ACCESS_KEY_ID="<r2-access-key-id>"
+export AWS_SECRET_ACCESS_KEY="<r2-secret-access-key>"
+export AWS_ENDPOINT_URL_S3="https://<cloudflare-account-id>.r2.cloudflarestorage.com"
+```
+
+Create an R2 API token with Object Read & Write on the `iac-state` bucket, fill in `.envrc`, then:
+
+```bash
+direnv allow
+terraform init
+```
+
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
