@@ -7,7 +7,7 @@ locals {
 }
 
 # K3S VM TEMPLATE
-# Mirrors the hand-built template 9000 (Ubuntu 24.04 cloud image), see LAB-16
+# Mirrors the hand-built template 9000 (LAB-16), now on the Debian 13 generic cloud image (LAB-75)
 resource "proxmox_virtual_environment_vm" "template" {
   node_name = var.proxmox_node
   vm_id     = var.template_vm_id
@@ -31,7 +31,7 @@ resource "proxmox_virtual_environment_vm" "template" {
     datastore_id = var.template_storage_pool
     interface    = "scsi0"
     import_from  = var.template_image_file_id
-    size         = 4 # cloud image is 3.5GB, size is whole GB
+    size         = 3 # matches the cloud image's 3GB virtual size
   }
 
   # Cloud-init drive only, clones set user, keys and IPs

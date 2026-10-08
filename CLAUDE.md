@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is a Terraform project for managing virtual machines on a Proxmox VE server using Infrastructure as Code. The project provisions VMs and lsc containers amongst other resources in Proxmox. Some VMs are part of a **K3s Kubernetes High Availability cluster** with **embedded etcd**. VMs are managed by Terraform.
+This is a Terraform project for managing virtual machines on a Proxmox VE server using Infrastructure as Code. The project provisions VMs and LXC containers amongst other resources in Proxmox. Some VMs are part of a **K3s Kubernetes High Availability cluster** with **embedded etcd**. VMs are managed by Terraform.
 
 ## K3s HA Architecture
 
@@ -11,10 +11,10 @@ This is a Terraform project for managing virtual machines on a Proxmox VE server
 **High Availability Setup with Embedded Etcd:**
 - 3 control plane nodes (minimum for HA quorum)
   - 2 VMs on Proxmox (IaC managed by Terraform, config management by Ansible)
-  - 1 Raspberry Pi 4 at 192.168.1.252 (config management by Ansible)
+  - 1 Raspberry Pi 4 at 192.168.1.241 (config management by Ansible)
 - 3 worker nodes
   - 2 VMs on Proxmox (IaC managed by Terraform, config management by Ansible)
-  - 1 Raspberry Pi 3 at 192.168.1.251 (config management by Ansible)
+  - 1 Raspberry Pi 3 at 192.168.1.242 (config management by Ansible)
 
 **Why 3 Control Nodes?**
 K3s embedded etcd requires an odd number of control nodes (3, 5, 7) for quorum. With 3 nodes:
@@ -25,33 +25,48 @@ K3s embedded etcd requires an odd number of control nodes (3, 5, 7) for quorum. 
 ### Node Distribution
 
 **Terraform-Managed (Proxmox VMs):**
-- `k3s-main-tf-01` (192.168.1.210) - Control plane, VM ID 210
-- `k3s-main-tf-02` (192.168.1.211) - Control plane, VM ID 211
-- `k3s-worker-tf-01` (192.168.1.215) - Worker, VM ID 215
-- `k3s-worker-tf-02` (192.168.1.216) - Worker, VM ID 216
-- `k3s-worker-tf-03` (192.168.1.217) - Worker, VM ID 217
+- `k3s-control-tf-01` (192.168.1.210) - Control plane, VM ID 210
+- `k3s-control-tf-02` (192.168.1.211) - Control plane, VM ID 211
+- `k3s-node-tf-01` (192.168.1.215) - Worker, VM ID 215
+- `k3s-node-tf-02` (192.168.1.216) - Worker, VM ID 216
 
 **Ansible-Managed (Physical Raspberry Pis):**
-- Pi 4 (192.168.1.252) - Control plane [HA quorum]
-- Pi 3 (192.168.1.251) - Worker
+- Pi 4 (192.168.1.241) - Control plane [HA quorum]
+- Pi 3 (192.168.1.242) - Worker
 
 ### IP Addressing Scheme
 
 **Convention:** Last octet matches VM ID
-Control nodes staring at VM ID 210 so last IP octet xxx.xxx.x.210 and going to xxx.xxx.x.215 although we only use two for now with room for future expansion in Proxmox VM ID and IP range as required.
+Control plane VMs use VM IDs/IPs 210–214 and workers use 215–220. Only two of each are used for now, leaving room for expansion.
 
 ## Network Architecture
 
 ### Network Topology
 - **ISP Network**: `192.168.0.0/24` (Gateway: `192.168.0.1`)
 - **Lab Network**: `192.168.1.0/24` (Gateway: `192.168.1.1` via MikroTik)
-  - Proxmox Host: `192.168.1.250:8006`
+  - Proxmox pve01: `192.168.1.250:8006`
+  - Proxmox pve02: `192.168.1.251:8006`
   - K3s Control VMs: `192.168.1.210-214` (note not all used initially and room for future expansion is in place)
-  - K3s Worker VMs: `192.168.1.214-220` (note not all used initially and room for future expansion is in place)
+  - K3s Worker VMs: `192.168.1.215-220` (note not all used initially and room for future expansion is in place)
   - Container (ISP Monitor): `192.168.1.249`
-  - Pi 3 (K3s Worker): `192.168.1.251`
-  - Pi 4 (K3s Control): `192.168.1.252`
-  - TP-Link Switch: `192.168.1.253`
+  - Pi 4 (K3s Control): `192.168.1.241`
+  - Pi 3 (K3s Worker): `192.168.1.242`
+  - TP-Link Switch: `192.168.1.254`
+
+### Lab IP Layout
+| Range | Use |
+|---|---|
+| `.1` | MikroTik |
+| `.2`–`.9` | Network gear (spare) |
+| `.10`–`.49` | k8s LoadBalancer pool (MetalLB) |
+| `.50`–`.99` | DHCP pool (set in mikrotik-hapac2) |
+| `.100`–`.199` | LXCs (VMID = last octet) |
+| `.200`–`.239` | k3s VMs (VMID = last octet) |
+| `.240`–`.248` | Pis and other physical hosts |
+| `.249` | MikroTik ISP monitor container |
+| `.250`–`.252` | Proxmox nodes (pve01, pve02, spare) |
+| `.253` | Proxmox QDevice (reserved) |
+| `.254` | TP-Link switch |
 
 ### Cluster Network Architecture
 ```
@@ -61,16 +76,16 @@ ISP Router (192.168.0.1)
             │
             └── Lab Network (192.168.1.0/24)
                     │
-                    ├── Proxmox Host (192.168.1.250)
-                    │   ├── k3s-main-tf-01 (192.168.1.210) - Control VM
-                    │   ├── k3s-main-tf-02 (192.168.1.211) - Control VM
-                    │   ├── k3s-worker-tf-01 (192.168.1.215) - Worker VM
-                    │   ├── k3s-worker-tf-02 (192.168.1.216) - Worker VM
-                    │   └── k3s-worker-tf-03 (192.168.1.217) - Worker VM
+                    ├── Proxmox pve01 (192.168.1.250)
+                    │   ├── k3s-control-tf-01 (192.168.1.210) - Control VM
+                    │   ├── k3s-control-tf-02 (192.168.1.211) - Control VM
+                    │   ├── k3s-node-tf-01 (192.168.1.215) - Worker VM
+                    │   └── k3s-node-tf-02 (192.168.1.216) - Worker VM
+                    ├── Proxmox pve02 (192.168.1.251)
+                    ├── Pi 4 (192.168.1.241)
+                    ├── Pi 3 (192.168.1.242)
                     ├── Container (192.168.1.249) - ISP Monitor
-                    ├── Pi 3 (192.168.1.251)
-                    ├── Pi 4 (192.168.1.252)
-                    └── TP-Link Switch (192.168.1.253)
+                    └── TP-Link Switch (192.168.1.254)
 ```
 
 **Key Points:**
@@ -78,21 +93,29 @@ ISP Router (192.168.0.1)
 - MikroTik provides routing between networks
 - K3s cluster is fully contained within lab network
 - IP range 192.168.1.210-220 reserved for K3s cluster VMs
-- Static leases at 192.168.1.249-253 for infrastructure devices
+- Static leases for physical devices at 192.168.1.241-242 and 192.168.1.250-254, outside the DHCP pool (192.168.1.50-99)
 
 ## File Structure
 
 ```
-terraform-proxmox/
+homelab-proxmox/
+├── backend.tf                  # Remote state in Cloudflare R2 (s3 backend, use_lockfile)
 ├── versions.tf                 # Terraform & provider version constraints, provider config
 ├── variables.tf                # All variable definitions with types and defaults
-├── main.tf                     # VM resource definitions using for_each
-├── outputs.tf                  # Outputs for Ansible integration and VM info
-├── terraform.tfvars            # variable values
-├── .gitignore                  # Git ignore patterns (excludes .tfvars, state files)
-├── .terraform.lock.hcl         # Provider version lock file (auto-generated)
+├── main.tf                     # Module calls (downloads, k3s_cluster, lxc_containers) and generated Ansible files
+├── cloudflare.tf               # Cloudflare tunnel, DNS records and Access applications
+├── outputs.tf                  # Root outputs (currently none)
+├── terraform.tfvars            # Variable values (gitignored)
+├── modules/
+│   ├── k3s_cluster/            # Template 9000 and the k3s VMs
+│   ├── lxc_container/          # LXC containers
+│   ├── download_file/          # ISO, LXC template and VM image downloads
+│   └── cloudflare_dns/         # Tunnel DNS records
+├── templates/                  # Templates for ansible/hosts.ini and the Postgres/Gitea init scripts
+├── ansible/                    # Playbooks and roles (hosts.ini is generated by Terraform)
+├── .gitignore                  # Git ignore patterns (excludes .tfvars, state files, hosts.ini)
 ├── README.md                   # User-facing documentation
-└── claude.md                   # This file - AI assistant context
+└── CLAUDE.md                   # This file - AI assistant context
 ```
 
 ## Coding Conventions
@@ -128,8 +151,8 @@ terraform-proxmox/
 ### Resource Naming
 
 - Resource names: snake_case (e.g., `k3s_nodes`, `control_plane`)
-- Variable names: snake_case with descriptive names (e.g., `proxmox_endpoint`, `vm_username`)
-- VM names: kebab-case (e.g., `k3s-main-tf-01`, `k3s-worker-tf-01`)
+- Variable names: snake_case with descriptive names (e.g., `k3s_template_vm_id`, `network_bridge`)
+- VM names: kebab-case (e.g., `k3s-control-tf-01`, `k3s-node-tf-01`)
 - Tags: lowercase, descriptive (e.g., `["terraform", "k3s", "control"]`)
 - Comments: Concise, describe purpose not implementation
 
@@ -141,16 +164,16 @@ terraform-proxmox/
 - More secure, granular permissions
 - Token format: `username@realm!tokenid=uuid`
 - Create token: `pveum user token add terraform-prov@pve terraform-token --privsep=0`
-- Set in terraform.tfvars: `proxmox_api_token = "terraform-prov@pve!terraform-token=xxx"`
+- Set in terraform.tfvars: `proxmox_auth.api_token = "terraform-prov@pve!terraform-token=xxx"`
 
-**Username/Password (Alternative)**
+**Username/Password (Alternative, currently in use)**
 - Simpler but less secure
 - Useful for initial testing
-- Comment out `api_token` in versions.tf and uncomment username/password
+- `versions.tf` currently has `api_token` commented out and uses `proxmox_auth.username`/`password` (`root@pam`). Swap the comments to use the token.
 
 ### Provider Configuration
 
-The BGP Proxmox provider (`bpg/proxmox`) is used instead of the Telmate provider:
+The bpg Proxmox provider (`bpg/proxmox`) is used instead of the Telmate provider:
 - Better cloud-init support
 - More active maintenance
 - Native Terraform Provider Protocol support
@@ -158,32 +181,14 @@ The BGP Proxmox provider (`bpg/proxmox`) is used instead of the Telmate provider
 
 ### Template Requirements
 
-**Template VM (ID 9000) must have:**
-- ✅ Cloud-init configured and installed
-- ✅ QEMU guest agent installed and enabled
-- ✅ Base disk size (10GB minimum)
-- ✅ Network interface configured
-- ✅ SSH server installed
-
-**Creating a template:**
-```bash
-# On Proxmox host
-qm create 9000 --name debian-12-template --memory 2048 --cores 2 --net0 virtio,bridge=vmbr0
-qm importdisk 9000 /path/to/debian-12-generic-amd64.qcow2 local-lvm
-qm set 9000 --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-9000-disk-0
-qm set 9000 --ide2 local-lvm:cloudinit
-qm set 9000 --boot c --bootdisk scsi0
-qm set 9000 --serial0 socket --vga serial0
-qm set 9000 --agent enabled=1
-qm template 9000
-```
+Template VM 9000 (`var.k3s_template_vm_id`) is created by Terraform in `modules/k3s_cluster` (`proxmox_virtual_environment_vm.template`), from the Debian 13 `generic` cloud image downloaded by `vm_image_downloads`. The k3s VMs are full clones of it. Nothing needs to be built by hand with `qm`.
 
 ### Disk Operations
 
 - **Disk Interface**: Use `scsi0` for best performance with virtio-scsi controller
 - **Disk Resizing**: Specify total size in `disk.size` - provider handles expansion
 - **File Format**: Use `raw` for better performance vs `qcow2`
-- **Storage Pool**: `local-lvm` is typical for VM disks
+- **Storage Pool**: VM and container disks use `nvme-storage`, ISOs and templates use `nvme-files`, and template 9000 is still on `local-lvm` (set in `locals` in `main.tf`)
 
 ### Network Configuration
 
@@ -194,9 +199,9 @@ qm template 9000
 ### Cloud-Init Configuration
 
 Cloud-init handles:
-- User creation (`var.vm_username`)
-- Password setting (`var.vm_password`)
-- SSH key injection (`var.ssh_public_key`)
+- User creation (`var.vm_cloudinit.username`)
+- Password setting (`var.vm_cloudinit.password`)
+- SSH key injection (`var.vm_cloudinit.ssh_public_key`)
 - Network configuration (static IP, gateway, DNS)
 - Hostname setting
 
@@ -234,13 +239,18 @@ Cloud-init handles:
 
 ### Variable Organization
 Variables are grouped by function using object types:
-- **proxmox**: Connection settings (endpoint, node, insecure, ssh_user)
-- **proxmox_auth**: Authentication credentials (api_token, username, password)
-- **proxmox_infrastructure**: Infrastructure settings (storage, network, template)
-- **vm_defaults**: Default VM configuration (disk, qemu agent, behavior)
+- **proxmox**: Connection settings (endpoint, node, insecure, ssh_user, ssh_port)
+- **proxmox_auth**: Authentication credentials (api_token, username, password, ssh_password)
+- **node_name**, **network_bridge**: Proxmox node and bridge
+- **iso_downloads**, **lxc_template_downloads**, **vm_image_downloads**: Files to download to Proxmox storage
+- **k3s_defaults**: Default k3s VM configuration (disk, qemu agent, behavior)
 - **network**: Network configuration (gateway, CIDR suffix)
 - **vm_cloudinit**: Cloud-init settings (user, password, SSH keys)
-- **k3s_vms**: K3s cluster VM specifications (map of objects)
+- **k3s_template_vm_id**, **k3s_vms**: Template VM ID and k3s VM specifications (map of objects)
+- **k3s_pi_01_ip**, **k3s_pi_02_ip**: Raspberry Pi IPs for the generated Ansible inventory
+- **lxc_defaults**, **lxc_containers**: LXC defaults and container specifications (map of objects)
+- **gitea_db_password**, **gitea_admin_password**: Gitea credentials for the init scripts
+- **cloudflare_\***: Cloudflare API token, zone and account for the tunnel
 
 ### Complex Variable Types
 
@@ -248,10 +258,11 @@ Variables are grouped by function using object types:
 ```hcl
 variable "proxmox" {
   type = object({
-    endpoint  = string
-    node      = string
-    insecure  = bool
-    ssh_user  = string
+    endpoint = string
+    node     = string
+    insecure = bool
+    ssh_user = string
+    ssh_port = optional(number, 22)
   })
 }
 ```
@@ -260,18 +271,18 @@ variable "proxmox" {
 ```hcl
 variable "proxmox_auth" {
   type = object({
-    api_token    = string
-    username     = string
-    password     = string
-    ssh_password = string
+    api_token    = optional(string, "")
+    username     = optional(string, "")
+    password     = optional(string, "")
+    ssh_password = optional(string, "")
   })
   sensitive = true
 }
 ```
 
-**VM Defaults** (nested object):
+**K3s Defaults** (nested object):
 ```hcl
-variable "vm_defaults" {
+variable "k3s_defaults" {
   type = object({
     disk_interface = string
     disk_size      = number
@@ -302,31 +313,32 @@ variable "k3s_vms" {
 }
 ```
 
-**Usage in resources:**
+**Usage in resources** (`modules/k3s_cluster/main.tf`, inputs passed from `module "k3s_cluster"` in `main.tf`):
 ```hcl
 resource "proxmox_virtual_environment_vm" "k3s_nodes" {
-  for_each = var.k3s_vms
+  for_each = var.cluster_nodes # var.k3s_vms
 
   name      = each.value.name
-  node_name = var.proxmox.node
+  node_name = var.proxmox_node # var.proxmox.node
   vm_id     = each.value.vm_id
 
   disk {
-    datastore_id = var.proxmox_infrastructure.storage_pool
-    interface    = var.vm_defaults.disk_interface
-    size         = var.vm_defaults.disk_size
+    datastore_id = var.storage_pool           # local.storage_pool
+    interface    = var.default_disk_interface # var.k3s_defaults.disk_interface
+    size         = var.default_disk_size      # var.k3s_defaults.disk_size
   }
 
   initialization {
     ip_config {
       ipv4 {
-        gateway = var.network.gateway
+        address = local.vm_ip_configs[each.key]
+        gateway = var.network_gateway # var.network.gateway
       }
     }
     user_account {
-      username = var.vm_cloudinit.username
-      password = var.vm_cloudinit.password
-      keys     = [var.vm_cloudinit.ssh_public_key]
+      username = var.cloudinit_username # var.vm_cloudinit.username
+      password = var.cloudinit_password # var.vm_cloudinit.password
+      keys     = var.cloudinit_ssh_key != "" ? [var.cloudinit_ssh_key] : []
     }
   }
 }
@@ -356,9 +368,9 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
 ## Terraform Best Practices
 
 ### State Management
+- State is remote in Cloudflare R2 (`backend.tf`), locked with `use_lockfile = true`. See README for the `.envrc` setup.
 - Never commit `terraform.tfvars` (contains credentials)
 - Keep state file secure (contains IP addresses, VM IDs)
-- Use state locking to prevent concurrent modifications
 
 ### Workflow
 1. Edit variables or resources
@@ -387,7 +399,7 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
 **"timeout while waiting for the virtual machine"**
 - QEMU agent not installed in template
 - VM taking too long to boot
-- Increase `qemu_agent_timeout`
+- Increase `k3s_defaults.qemu_agent.timeout`
 
 **"resource not found" on apply**
 - Template VM (9000) doesn't exist
@@ -453,7 +465,7 @@ sudo cloud-init query --all
 
 ## Additional Resources
 
-- [BGP Proxmox Provider Docs](https://registry.terraform.io/providers/bpg/proxmox/latest/docs)
+- [bpg Proxmox Provider Docs](https://registry.terraform.io/providers/bpg/proxmox/latest/docs)
 - [Proxmox VE Documentation](https://pve.proxmox.com/pve-docs/)
 - [Cloud-init Documentation](https://cloudinit.readthedocs.io/)
 - [K3s Documentation](https://docs.k3s.io/)
@@ -463,9 +475,8 @@ sudo cloud-init query --all
 1. Always check if a value should be a variable
 2. Always try to use existing variables rather than creating new ones
 3. Always maintain DRY principles
-5. Always keep comments simple and clean
-6. Test changes with `terraform plan` before committing
-7. NEVER run terraform apply
-8. NEVER run terraform destroy
-9. NEVER run terraform destroy -auto-approve
-10. NEVER run terraform destroy -auto-approve
+4. Always keep comments simple and clean
+5. Test changes with `terraform plan` before committing
+6. NEVER run terraform apply
+7. NEVER run terraform destroy
+8. NEVER run terraform destroy -auto-approve

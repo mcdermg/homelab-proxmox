@@ -112,17 +112,13 @@ variable "vm_image_downloads" {
     upload_timeout          = optional(number, 1800)
   }))
   default = {
-    # Pinned release so rebuilds get the same image; .qcow2 name because import storage is picky about extensions
-    ubuntu_2404_cloud = {
-      url                = "https://cloud-images.ubuntu.com/releases/noble/release-20260926/ubuntu-24.04-server-cloudimg-amd64.img"
-      file_name          = "ubuntu-24.04-server-cloudimg-amd64.qcow2"
-      checksum           = "6a81c37564db9b1ee84e141922625e1d7c5b389b99bb3c572e0243607d5bb4d2"
-      checksum_algorithm = "sha256"
+    # Pinned release so rebuilds get the same image
+    # generic not genericcloud: the cloud kernel lacks the drivers to see the cloud-init drive on ide2
+    debian_13_generic = {
+      url                = "https://cloud.debian.org/images/cloud/trixie/20261001-2618/debian-13-generic-amd64-20261001-2618.qcow2"
+      checksum           = "6f0f93335bdef4ccf523c4317cc663ea52ca23b862667785f3d6d186ab4674a937385ccff0c55996b4b2e4c19e440cdf211e2a75ffa2f6548037ab43950c841d"
+      checksum_algorithm = "sha512"
     }
-    # debian_12_cloud = {
-    #   url       = "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"
-    #   file_name = "debian-12-generic-amd64.img"
-    # }
   }
 }
 
