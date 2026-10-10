@@ -4,15 +4,15 @@ terraform {
   required_providers {
     proxmox = {
       source  = "bpg/proxmox"
-      version = "~> 0.85"
+      version = "0.86.0"
+    }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "5.12.0"
     }
     local = {
       source  = "hashicorp/local"
       version = "~> 2.5"
-    }
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = "~> 5.0"
     }
     random = {
       source  = "hashicorp/random"
