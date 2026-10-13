@@ -17,6 +17,7 @@ module "cloudflare_dns" {
   source = "./modules/cloudflare_dns"
 
   zone_id = var.cloudflare_zone_id
+  zone    = var.cloudflare_zone
 
   # A Records - point to IP addresses
   a_records = {
@@ -123,15 +124,15 @@ a_records = {
 ## Requirements
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | ~> 1.13 |
 | <a name="requirement_cloudflare"></a> [cloudflare](#requirement\_cloudflare) | ~> 5.0 |
 
 ## Providers
 
 | Name | Version |
-|------|---------|
-| <a name="provider_cloudflare"></a> [cloudflare](#provider\_cloudflare) | 5.19.1 |
+| ---- | ------- |
+| <a name="provider_cloudflare"></a> [cloudflare](#provider\_cloudflare) | 5.27.0 |
 
 ## Modules
 
@@ -140,21 +141,22 @@ No modules.
 ## Resources
 
 | Name | Type |
-|------|------|
+| ---- | ---- |
 | [cloudflare_dns_record.a_records](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/dns_record) | resource |
 | [cloudflare_dns_record.cname_records](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/dns_record) | resource |
 
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| <a name="input_a_records"></a> [a\_records](#input\_a\_records) | Map of A records to create. Key is the record name, value contains ip\_address and optional ttl, proxied, comment | <pre>map(object({<br>    ip_address = string<br>    ttl        = optional(number, 1)   # 1 = Auto<br>    proxied    = optional(bool, false) # false = DNS only, true = proxied<br>    comment    = optional(string, "Managed by Terraform")<br>  }))</pre> | `{}` | no |
-| <a name="input_cname_records"></a> [cname\_records](#input\_cname\_records) | Map of CNAME records to create. Key is the record name, value contains target and optional ttl, proxied, comment | <pre>map(object({<br>    target  = string<br>    ttl     = optional(number, 1)   # 1 = Auto<br>    proxied = optional(bool, false) # false = DNS only, true = proxied<br>    comment = optional(string, "Managed by Terraform")<br>  }))</pre> | `{}` | no |
+| ---- | ----------- | ---- | ------- | :------: |
+| <a name="input_a_records"></a> [a\_records](#input\_a\_records) | Map of A records to create. Key is the record name, value contains ip\_address and optional ttl, proxied, comment | <pre>map(object({<br/>    ip_address = string<br/>    ttl        = optional(number, 1)   # 1 = Auto<br/>    proxied    = optional(bool, false) # false = DNS only, true = proxied<br/>    comment    = optional(string, "Managed by Terraform")<br/>  }))</pre> | `{}` | no |
+| <a name="input_cname_records"></a> [cname\_records](#input\_cname\_records) | Map of CNAME records to create. Key is the record name, value contains target and optional ttl, proxied, comment | <pre>map(object({<br/>    target  = string<br/>    ttl     = optional(number, 1)   # 1 = Auto<br/>    proxied = optional(bool, false) # false = DNS only, true = proxied<br/>    comment = optional(string, "Managed by Terraform")<br/>  }))</pre> | `{}` | no |
+| <a name="input_zone"></a> [zone](#input\_zone) | Cloudflare zone name, appended to each record key to form the FQDN | `string` | n/a | yes |
 | <a name="input_zone_id"></a> [zone\_id](#input\_zone\_id) | Cloudflare Zone ID | `string` | n/a | yes |
 
 ## Outputs
 
 | Name | Description |
-|------|-------------|
+| ---- | ----------- |
 | <a name="output_cname_records"></a> [cname\_records](#output\_cname\_records) | Map of CNAME records |
 <!-- END_TF_DOCS -->

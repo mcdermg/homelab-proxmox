@@ -2,7 +2,7 @@ resource "cloudflare_dns_record" "a_records" {
   for_each = var.a_records
 
   zone_id = var.zone_id
-  name    = each.key
+  name    = "${each.key}.${var.zone}"
   content = each.value.ip_address
   type    = "A"
   ttl     = try(each.value.ttl, 1) # 1 = Auto
@@ -14,7 +14,7 @@ resource "cloudflare_dns_record" "cname_records" {
   for_each = var.cname_records
 
   zone_id = var.zone_id
-  name    = each.key
+  name    = "${each.key}.${var.zone}"
   content = each.value.target
   type    = "CNAME"
   ttl     = try(each.value.ttl, 1) # 1 = Auto
