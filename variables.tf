@@ -19,6 +19,18 @@ variable "proxmox_nodes" {
   }
 }
 
+variable "apt_repositories" {
+  description = "APT standard repository handles to enable or disable on every Proxmox node"
+  type = object({
+    enabled  = list(string)
+    disabled = list(string)
+  })
+  default = {
+    enabled  = ["no-subscription"]
+    disabled = ["enterprise", "ceph-squid-enterprise"]
+  }
+}
+
 variable "proxmox_auth" {
   description = "Proxmox authentication credentials"
   type = object({

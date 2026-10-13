@@ -131,6 +131,7 @@ terraform init
 | <a name="module_k3s_cluster"></a> [k3s\_cluster](#module\_k3s\_cluster) | ./modules/k3s_cluster | n/a |
 | <a name="module_lxc_containers"></a> [lxc\_containers](#module\_lxc\_containers) | ./modules/lxc_container | n/a |
 | <a name="module_lxc_template_downloads"></a> [lxc\_template\_downloads](#module\_lxc\_template\_downloads) | ./modules/download_file | n/a |
+| <a name="module_proxmox_node"></a> [proxmox\_node](#module\_proxmox\_node) | ./modules/proxmox_node | n/a |
 | <a name="module_tunnel_dns_records"></a> [tunnel\_dns\_records](#module\_tunnel\_dns\_records) | ./modules/cloudflare_dns | n/a |
 | <a name="module_vm_image_downloads"></a> [vm\_image\_downloads](#module\_vm\_image\_downloads) | ./modules/download_file | n/a |
 
@@ -153,6 +154,7 @@ terraform init
 
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
+| <a name="input_apt_repositories"></a> [apt\_repositories](#input\_apt\_repositories) | APT standard repository handles to enable or disable on every Proxmox node | <pre>object({<br/>    enabled  = list(string)<br/>    disabled = list(string)<br/>  })</pre> | <pre>{<br/>  "disabled": [<br/>    "enterprise",<br/>    "ceph-squid-enterprise"<br/>  ],<br/>  "enabled": [<br/>    "no-subscription"<br/>  ]<br/>}</pre> | no |
 | <a name="input_cloudflare_account_id"></a> [cloudflare\_account\_id](#input\_cloudflare\_account\_id) | Cloudflare Account ID for tunnel management | `string` | n/a | yes |
 | <a name="input_cloudflare_api_token"></a> [cloudflare\_api\_token](#input\_cloudflare\_api\_token) | Cloudflare API token for managing DNS and tunnels | `string` | n/a | yes |
 | <a name="input_cloudflare_zone"></a> [cloudflare\_zone](#input\_cloudflare\_zone) | Cloudflare zone/domain name | `string` | n/a | yes |
