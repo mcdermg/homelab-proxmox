@@ -1,6 +1,6 @@
 locals {
   # Have been playing with storage so leaving these here for now and can move to vars later
-  datastore_id = "nvme-files"   # NVMe ZFS pool for ISOs/templates (file storage)
+  datastore_id = "nvme-files"   # Directory storage on the nvme-storage pool for ISOs/templates
   storage_pool = "nvme-storage" # NVMe ZFS pool for VM/container disks
 
   # TODO: move template 9000 from local-lvm to local.storage_pool (nvme-storage) after the pve01 rebuild
@@ -29,21 +29,36 @@ resource "proxmox_storage_zfspool" "nvme_storage" {
   depends_on = [module.proxmox_node]
 }
 
-# DOWNLOADS
-module "lxc_template_downloads" {
-  source = "./modules/download_file"
+# Directory on each node's pool for ISOs, LXC templates and VM images
+# shortcut: the provider can't set is_mountpoint, so if a pool fails to mount Proxmox writes to the root disk instead; set it once the provider supports it
+resource "proxmox_storage_directory" "nvme_files" {
+  id               = local.datastore_id
+  path             = "/${local.storage_pool}/files"
+  nodes            = keys(var.proxmox_nodes)
+  content          = ["iso", "vztmpl", "import"]
+  create_base_path = true
 
-  node_name    = var.proxmox.node
-  datastore_id = local.datastore_id
+  depends_on = [module.proxmox_node]
+}
+
+# DOWNLOADS
+# nvme-files is local to each node, so every node gets its own copy
+module "lxc_template_downloads" {
+  source   = "./modules/download_file"
+  for_each = var.proxmox_nodes
+
+  node_name    = each.key
+  datastore_id = proxmox_storage_directory.nvme_files.id
   downloads    = var.lxc_template_downloads
   content_type = "vztmpl"
 }
 
 module "iso_downloads" {
-  source = "./modules/download_file"
+  source   = "./modules/download_file"
+  for_each = var.proxmox_nodes
 
-  node_name    = var.proxmox.node
-  datastore_id = local.datastore_id
+  node_name    = each.key
+  datastore_id = proxmox_storage_directory.nvme_files.id
   downloads    = var.iso_downloads
   content_type = "iso"
 
@@ -53,10 +68,11 @@ module "iso_downloads" {
 }
 
 module "vm_image_downloads" {
-  source = "./modules/download_file"
+  source   = "./modules/download_file"
+  for_each = var.proxmox_nodes
 
-  node_name    = var.proxmox.node
-  datastore_id = local.datastore_id
+  node_name    = each.key
+  datastore_id = proxmox_storage_directory.nvme_files.id
   downloads    = var.vm_image_downloads
   content_type = "import"
 
@@ -78,7 +94,7 @@ module "k3s_cluster" {
 
   # Template
   template_storage_pool  = local.template_storage_pool
-  template_image_file_id = module.vm_image_downloads.file_ids["debian_13_generic"]
+  template_image_file_id = module.vm_image_downloads[var.proxmox.node].file_ids["debian_13_generic"]
 
   # Network config
   network_bridge      = var.network_bridge
