@@ -50,6 +50,30 @@ postgres ansible_host=${postgres_ip}
 gitea ansible_host=${gitea_ip}
 cloudflared_update ansible_host=${cloudflared_ip}
 
+[lxc_containers:children]
+ssh_containers
+
+# Plain Debian 13 containers, configured directly over SSH with the root key OpenTofu injects
+[librespeed_host]
+librespeed ansible_host=${librespeed_ip}
+
+[pulse_host]
+pulse ansible_host=${pulse_ip}
+
+[pulse_host:vars]
+pulse_admin_password=${pulse_admin_password}
+pulse_api_token=${pulse_api_token}
+pulse_pve_token_id=${pulse_pve_token_id}
+pulse_pve_token_secret=${pulse_pve_token_secret}
+
+[ssh_containers:children]
+librespeed_host
+pulse_host
+
+[ssh_containers:vars]
+ansible_user=root
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
 [lxc_containers:vars]
 ansible_user=root
 ansible_password=${lxc_root_password}

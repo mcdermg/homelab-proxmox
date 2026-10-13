@@ -196,3 +196,16 @@
           - "Container IP: {{ ansible_host }}"
           - "Tunnel ID: {{ cloudflare_tunnel_id }}"
           - "================================"
+
+# Plain Debian 13 containers: OpenTofu creates and starts them with the root SSH key, so these plays connect directly
+- name: Install LibreSpeed
+  hosts: librespeed_host
+  gather_facts: false
+  roles:
+    - librespeed
+
+- name: Install and configure Pulse
+  hosts: pulse_host
+  gather_facts: false
+  roles:
+    - pulse

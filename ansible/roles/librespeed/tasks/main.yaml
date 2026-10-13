@@ -1,0 +1,19 @@
+---
+# roles/librespeed/tasks/main.yaml
+- name: Download the pinned LibreSpeed package
+  ansible.builtin.get_url:
+    url: "https://github.com/librespeed/speedtest-rust/releases/download/{{ librespeed_version }}/{{ librespeed_deb }}"
+    dest: "/tmp/librespeed-rs-{{ librespeed_version }}.deb"
+    checksum: "sha256:{{ librespeed_sha256 }}"
+    mode: '0644'
+
+- name: Install LibreSpeed package
+  ansible.builtin.apt:
+    deb: "/tmp/librespeed-rs-{{ librespeed_version }}.deb"
+    state: present
+
+- name: Start and enable LibreSpeed
+  ansible.builtin.systemd:
+    name: speedtest_rs
+    state: started
+    enabled: true

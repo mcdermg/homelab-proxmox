@@ -170,6 +170,56 @@ module "lxc_containers" {
   ]
 }
 
+# PULSE MONITORING ACCESS
+# Read-only Proxmox access for Pulse, mirroring the user, token and role Pulse's own install.sh creates
+resource "proxmox_virtual_environment_user" "pulse_monitor" {
+  user_id = "pulse-monitor@pve"
+  comment = "Pulse monitoring (managed by OpenTofu)"
+}
+
+resource "proxmox_user_token" "pulse_monitor" {
+  user_id               = proxmox_virtual_environment_user.pulse_monitor.user_id
+  token_name            = "pulse-readonly"
+  privileges_separation = true
+  comment               = "Pulse monitoring (managed by OpenTofu)"
+}
+
+# VM.GuestAgent.FileRead lets Pulse read VM memory from /proc/meminfo
+resource "proxmox_virtual_environment_role" "pulse_monitor" {
+  role_id    = "PulseMonitor"
+  privileges = ["Sys.Audit", "VM.GuestAgent.Audit", "VM.GuestAgent.FileRead"]
+}
+
+# The token has privilege separation, so it needs the same ACLs as the user
+resource "proxmox_acl" "pulse_user" {
+  for_each = toset(["PVEAuditor", proxmox_virtual_environment_role.pulse_monitor.role_id])
+
+  user_id   = proxmox_virtual_environment_user.pulse_monitor.user_id
+  role_id   = each.key
+  path      = "/"
+  propagate = true
+}
+
+resource "proxmox_acl" "pulse_token" {
+  for_each = toset(["PVEAuditor", proxmox_virtual_environment_role.pulse_monitor.role_id])
+
+  token_id  = proxmox_user_token.pulse_monitor.id
+  role_id   = each.key
+  path      = "/"
+  propagate = true
+}
+
+# Pulse admin login and API token, used by Ansible for the first-time setup
+resource "random_password" "pulse_admin" {
+  length  = 32
+  special = false
+}
+
+resource "random_password" "pulse_api_token" {
+  length  = 48
+  special = false
+}
+
 resource "local_file" "ansible_hosts_file" {
   count = contains(keys(var.lxc_containers), "postgres") && contains(keys(var.lxc_containers), "gitea") ? 1 : 0
 
@@ -191,6 +241,16 @@ resource "local_file" "ansible_hosts_file" {
     bind9_ip         = var.lxc_containers.bind9.ip_address
     cloudflared_ctid = var.lxc_containers.cloudflared.vm_id
     cloudflared_ip   = var.lxc_containers.cloudflared.ip_address
+
+    # Containers configured over SSH
+    librespeed_ip = var.lxc_containers.librespeed.ip_address
+    pulse_ip      = var.lxc_containers.pulse.ip_address
+
+    # Pulse first-time setup
+    pulse_admin_password   = random_password.pulse_admin.result
+    pulse_api_token        = random_password.pulse_api_token.result
+    pulse_pve_token_id     = proxmox_user_token.pulse_monitor.id
+    pulse_pve_token_secret = split("=", proxmox_user_token.pulse_monitor.value)[1]
 
     # Cloudflare Tunnel
     cloudflare_tunnel_id    = cloudflare_zero_trust_tunnel_cloudflared.homelab.id
