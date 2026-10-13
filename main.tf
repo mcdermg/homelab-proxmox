@@ -14,13 +14,26 @@ module "proxmox_node" {
 
   node_name        = each.key
   apt_repositories = var.apt_repositories
+  zfs_pool_name    = local.storage_pool
+  zfs_pool         = each.value.zfs_pool
+}
+
+# STORAGE
+resource "proxmox_storage_zfspool" "nvme_storage" {
+  id       = local.storage_pool
+  zfs_pool = local.storage_pool
+  nodes    = keys(var.proxmox_nodes)
+  content  = ["images", "rootdir"]
+
+  # Each node's pool must exist before the cluster-wide entry points at it
+  depends_on = [module.proxmox_node]
 }
 
 # DOWNLOADS
 module "lxc_template_downloads" {
   source = "./modules/download_file"
 
-  node_name    = var.node_name
+  node_name    = var.proxmox.node
   datastore_id = local.datastore_id
   downloads    = var.lxc_template_downloads
   content_type = "vztmpl"
@@ -29,7 +42,7 @@ module "lxc_template_downloads" {
 module "iso_downloads" {
   source = "./modules/download_file"
 
-  node_name    = var.node_name
+  node_name    = var.proxmox.node
   datastore_id = local.datastore_id
   downloads    = var.iso_downloads
   content_type = "iso"
@@ -42,7 +55,7 @@ module "iso_downloads" {
 module "vm_image_downloads" {
   source = "./modules/download_file"
 
-  node_name    = var.node_name
+  node_name    = var.proxmox.node
   datastore_id = local.datastore_id
   downloads    = var.vm_image_downloads
   content_type = "import"
@@ -61,7 +74,7 @@ module "k3s_cluster" {
   # Proxmox settings
   proxmox_node   = var.proxmox.node
   template_vm_id = var.k3s_template_vm_id
-  storage_pool   = local.storage_pool
+  storage_pool   = proxmox_storage_zfspool.nvme_storage.id
 
   # Template
   template_storage_pool  = local.template_storage_pool
@@ -96,7 +109,7 @@ module "lxc_containers" {
   source = "./modules/lxc_container"
 
   proxmox_node    = var.proxmox.node
-  storage_pool    = local.storage_pool
+  storage_pool    = proxmox_storage_zfspool.nvme_storage.id
   network_bridge  = var.network_bridge
   network_gateway = var.network.gateway
 

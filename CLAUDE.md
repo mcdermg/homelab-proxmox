@@ -110,7 +110,7 @@ homelab-proxmox/
 ├── outputs.tf                  # Root outputs (currently none)
 ├── terraform.tfvars            # Variable values (gitignored)
 ├── modules/
-│   ├── proxmox_node/           # Per-node host config (APT repos), one instance per node
+│   ├── proxmox_node/           # Per-node host config (APT repos, ZFS pool), one instance per node
 │   ├── k3s_cluster/            # Template 9000 and the k3s VMs
 │   ├── lxc_container/          # LXC containers
 │   ├── download_file/          # ISO, LXC template and VM image downloads
@@ -190,7 +190,7 @@ Template VM 9000 (`var.k3s_template_vm_id`) is created by OpenTofu in `modules/k
 - **Disk Interface**: Use `scsi0` for best performance with virtio-scsi controller
 - **Disk Resizing**: Specify total size in `disk.size` - provider handles expansion
 - **File Format**: Use `raw` for better performance vs `qcow2`
-- **Storage Pool**: VM and container disks use `nvme-storage`, ISOs and templates use `nvme-files`, and template 9000 is still on `local-lvm` (set in `locals` in `main.tf`)
+- **Storage Pool**: VM and container disks use `nvme-storage` (a ZFS pool per node from `module.proxmox_node`, plus one cluster-wide storage entry in `main.tf`), ISOs and templates use `nvme-files`, and template 9000 is still on `local-lvm` (set in `locals` in `main.tf`)
 
 ### Network Configuration
 
@@ -243,9 +243,9 @@ Cloud-init handles:
 Variables are grouped by function using object types:
 - **proxmox**: Connection settings (endpoint, node, insecure, ssh_user, ssh_port)
 - **proxmox_auth**: Proxmox API token (`api_token` only; SSH uses the agent)
-- **proxmox_nodes**: Node names and SSH addresses; drives the provider SSH blocks and `module.proxmox_node`
+- **proxmox_nodes**: Per node: SSH address and ZFS pool disks (`/dev/disk/by-id` paths); drives the provider SSH blocks, `module.proxmox_node` and the `nvme-storage` entry's node list
 - **apt_repositories**: APT standard repo handles to enable/disable on every node
-- **node_name**, **network_bridge**: Proxmox node and bridge
+- **network_bridge**: Proxmox network bridge
 - **iso_downloads**, **lxc_template_downloads**, **vm_image_downloads**: Files to download to Proxmox storage
 - **k3s_defaults**: Default k3s VM configuration (disk, qemu agent, behavior)
 - **network**: Network configuration (gateway, CIDR suffix)
