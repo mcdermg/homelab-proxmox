@@ -107,6 +107,7 @@ homelab-proxmox/
 ├── outputs.tf                  # Root outputs (currently none)
 ├── terraform.tfvars            # Variable values (gitignored)
 ├── modules/
+│   ├── proxmox_node/           # Per-node host config (APT repos), one instance per node
 │   ├── k3s_cluster/            # Template 9000 and the k3s VMs
 │   ├── lxc_container/          # LXC containers
 │   ├── download_file/          # ISO, LXC template and VM image downloads
@@ -239,6 +240,8 @@ Cloud-init handles:
 Variables are grouped by function using object types:
 - **proxmox**: Connection settings (endpoint, node, insecure, ssh_user, ssh_port)
 - **proxmox_auth**: Proxmox API token (`api_token` only; SSH uses the agent)
+- **proxmox_nodes**: Node names and SSH addresses; drives the provider SSH blocks and `module.proxmox_node`
+- **apt_repositories**: APT standard repo handles to enable/disable on every node
 - **node_name**, **network_bridge**: Proxmox node and bridge
 - **iso_downloads**, **lxc_template_downloads**, **vm_image_downloads**: Files to download to Proxmox storage
 - **k3s_defaults**: Default k3s VM configuration (disk, qemu agent, behavior)

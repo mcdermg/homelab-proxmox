@@ -7,6 +7,15 @@ locals {
   template_storage_pool = "local-lvm"
 }
 
+# PROXMOX NODES
+module "proxmox_node" {
+  source   = "./modules/proxmox_node"
+  for_each = var.proxmox_nodes
+
+  node_name        = each.key
+  apt_repositories = var.apt_repositories
+}
+
 # DOWNLOADS
 module "lxc_template_downloads" {
   source = "./modules/download_file"
