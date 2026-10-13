@@ -37,9 +37,15 @@ module "k3s_cluster" {
 
   # Proxmox settings
   proxmox_node   = "pve01"
-  template_vm_id = 9000
-  storage_pool   = "local-lvm"
+  storage_pool   = "nvme-storage"
   network_bridge = "vmbr0"
+
+  # One template per node, each from that node's copy of the cloud image
+  template_storage_pool = "nvme-storage"
+  templates = {
+    pve01 = { vm_id = 9000, image_file_id = "nvme-files:import/debian-13-generic-amd64.qcow2" }
+    pve02 = { vm_id = 9001, image_file_id = "nvme-files:import/debian-13-generic-amd64.qcow2" }
+  }
 
   # Network configuration
   network_gateway     = "192.168.1.1"
@@ -60,8 +66,8 @@ No requirements.
 ## Providers
 
 | Name | Version |
-|------|---------|
-| <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | 0.107.0 |
+| ---- | ------- |
+| <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | 0.116.0 |
 
 ## Modules
 
@@ -70,18 +76,18 @@ No modules.
 ## Resources
 
 | Name | Type |
-|------|------|
+| ---- | ---- |
 | [proxmox_virtual_environment_vm.k3s_nodes](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/virtual_environment_vm) | resource |
 | [proxmox_virtual_environment_vm.template](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/virtual_environment_vm) | resource |
 
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+| ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_cloudinit_password"></a> [cloudinit\_password](#input\_cloudinit\_password) | Cloud-init user account password | `string` | n/a | yes |
 | <a name="input_cloudinit_ssh_key"></a> [cloudinit\_ssh\_key](#input\_cloudinit\_ssh\_key) | SSH public key for cloud-init user | `string` | `""` | no |
 | <a name="input_cloudinit_username"></a> [cloudinit\_username](#input\_cloudinit\_username) | Cloud-init user account username | `string` | n/a | yes |
-| <a name="input_cluster_nodes"></a> [cluster\_nodes](#input\_cluster\_nodes) | K3s cluster node specifications | <pre>map(object({<br>    vm_id      = number<br>    name       = string<br>    cores      = number<br>    memory     = number<br>    ip_address = string<br>    role       = string # "control" or "worker"<br>  }))</pre> | n/a | yes |
+| <a name="input_cluster_nodes"></a> [cluster\_nodes](#input\_cluster\_nodes) | K3s cluster node specifications | <pre>map(object({<br/>    vm_id      = number<br/>    name       = string<br/>    cores      = number<br/>    memory     = number<br/>    ip_address = string<br/>    role       = string # "control" or "worker"<br/>  }))</pre> | n/a | yes |
 | <a name="input_default_disk_interface"></a> [default\_disk\_interface](#input\_default\_disk\_interface) | Default disk interface (e.g., 'scsi0') | `string` | `"scsi0"` | no |
 | <a name="input_default_disk_size"></a> [default\_disk\_size](#input\_default\_disk\_size) | Default disk size in GB | `number` | `17` | no |
 | <a name="input_network_bridge"></a> [network\_bridge](#input\_network\_bridge) | The network bridge for VM network devices | `string` | n/a | yes |
@@ -92,10 +98,9 @@ No modules.
 | <a name="input_qemu_agent_timeout"></a> [qemu\_agent\_timeout](#input\_qemu\_agent\_timeout) | QEMU agent timeout | `string` | `"4m"` | no |
 | <a name="input_storage_pool"></a> [storage\_pool](#input\_storage\_pool) | The storage pool for VM disks and cloud-init | `string` | n/a | yes |
 | <a name="input_template_cores"></a> [template\_cores](#input\_template\_cores) | CPU cores for the template | `number` | `2` | no |
-| <a name="input_template_image_file_id"></a> [template\_image\_file\_id](#input\_template\_image\_file\_id) | File ID of the cloud image the template disk is imported from (e.g. 'nvme-files:import/image.qcow2') | `string` | n/a | yes |
 | <a name="input_template_memory"></a> [template\_memory](#input\_template\_memory) | Memory in MB for the template | `number` | `2048` | no |
 | <a name="input_template_storage_pool"></a> [template\_storage\_pool](#input\_template\_storage\_pool) | The storage pool for the template's disk and cloud-init drive | `string` | n/a | yes |
-| <a name="input_template_vm_id"></a> [template\_vm\_id](#input\_template\_vm\_id) | The VM ID of the template to clone from | `number` | n/a | yes |
+| <a name="input_templates"></a> [templates](#input\_templates) | Templates to build, keyed by Proxmox node: VM ID and the cloud image file ID on that node (e.g. 'nvme-files:import/image.qcow2') | <pre>map(object({<br/>    vm_id         = number<br/>    image_file_id = string<br/>  }))</pre> | n/a | yes |
 | <a name="input_vm_on_boot"></a> [vm\_on\_boot](#input\_vm\_on\_boot) | Start VM on boot | `bool` | `true` | no |
 | <a name="input_vm_started"></a> [vm\_started](#input\_vm\_started) | Start VM after creation | `bool` | `true` | no |
 | <a name="input_vm_stop_on_destroy"></a> [vm\_stop\_on\_destroy](#input\_vm\_stop\_on\_destroy) | Stop VM when destroying | `bool` | `true` | no |
@@ -103,7 +108,7 @@ No modules.
 ## Outputs
 
 | Name | Description |
-|------|-------------|
+| ---- | ----------- |
 | <a name="output_ansible_inventory_ini"></a> [ansible\_inventory\_ini](#output\_ansible\_inventory\_ini) | Ansible inventory in INI format |
 | <a name="output_ansible_inventory_json"></a> [ansible\_inventory\_json](#output\_ansible\_inventory\_json) | Ansible inventory in JSON format |
 | <a name="output_cluster_summary"></a> [cluster\_summary](#output\_cluster\_summary) | High-level cluster configuration summary |

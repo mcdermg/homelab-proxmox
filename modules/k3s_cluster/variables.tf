@@ -17,11 +17,6 @@ variable "proxmox_node" {
   type        = string
 }
 
-variable "template_vm_id" {
-  description = "The VM ID of the template to clone from"
-  type        = number
-}
-
 variable "storage_pool" {
   description = "The storage pool for VM disks and cloud-init"
   type        = string
@@ -33,9 +28,12 @@ variable "template_storage_pool" {
   type        = string
 }
 
-variable "template_image_file_id" {
-  description = "File ID of the cloud image the template disk is imported from (e.g. 'nvme-files:import/image.qcow2')"
-  type        = string
+variable "templates" {
+  description = "Templates to build, keyed by Proxmox node: VM ID and the cloud image file ID on that node (e.g. 'nvme-files:import/image.qcow2')"
+  type = map(object({
+    vm_id         = number
+    image_file_id = string
+  }))
 }
 
 variable "template_cores" {

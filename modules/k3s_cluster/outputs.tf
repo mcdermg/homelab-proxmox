@@ -119,7 +119,7 @@ output "cluster_summary" {
     worker_nodes    = length([for vm in var.cluster_nodes : vm if vm.role == "worker"])
     network_gateway = var.network_gateway
     storage_pool    = var.storage_pool
-    template_id     = var.template_vm_id
+    template_ids    = { for node, t in var.templates : node => t.vm_id }
   }
 }
 

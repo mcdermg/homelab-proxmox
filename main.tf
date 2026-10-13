@@ -1,10 +1,7 @@
 locals {
   # Have been playing with storage so leaving these here for now and can move to vars later
   datastore_id = "nvme-files"   # Directory storage on the nvme-storage pool for ISOs/templates
-  storage_pool = "nvme-storage" # NVMe ZFS pool for VM/container disks
-
-  # TODO: move template 9000 from local-lvm to local.storage_pool (nvme-storage) after the pve01 rebuild
-  template_storage_pool = "local-lvm"
+  storage_pool = "nvme-storage" # NVMe ZFS pool for VM/container disks and template 9000
 }
 
 # PROXMOX NODES
@@ -88,13 +85,17 @@ module "k3s_cluster" {
   cluster_nodes = var.k3s_vms
 
   # Proxmox settings
-  proxmox_node   = var.proxmox.node
-  template_vm_id = var.k3s_template_vm_id
-  storage_pool   = proxmox_storage_zfspool.nvme_storage.id
+  proxmox_node = var.proxmox.node
+  storage_pool = proxmox_storage_zfspool.nvme_storage.id
 
-  # Template
-  template_storage_pool  = local.template_storage_pool
-  template_image_file_id = module.vm_image_downloads[var.proxmox.node].file_ids["debian_13_generic"]
+  # Templates: one per node, each built from that node's copy of the cloud image
+  template_storage_pool = proxmox_storage_zfspool.nvme_storage.id
+  templates = {
+    for node, cfg in var.proxmox_nodes : node => {
+      vm_id         = cfg.template_vm_id
+      image_file_id = module.vm_image_downloads[node].file_ids["debian_13_generic"]
+    }
+  }
 
   # Network config
   network_bridge      = var.network_bridge

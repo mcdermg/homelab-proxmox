@@ -8,9 +8,12 @@ locals {
 
 # K3S VM TEMPLATE
 # Mirrors the hand-built template 9000 (LAB-16), now on the Debian 13 generic cloud image (LAB-75)
+# One per node: templates on local ZFS can't be cloned to another node (LAB-66)
 resource "proxmox_virtual_environment_vm" "template" {
-  node_name = var.proxmox_node
-  vm_id     = var.template_vm_id
+  for_each = var.templates
+
+  node_name = each.key
+  vm_id     = each.value.vm_id
 
   template = true
   on_boot  = false
@@ -30,7 +33,7 @@ resource "proxmox_virtual_environment_vm" "template" {
   disk {
     datastore_id = var.template_storage_pool
     interface    = "scsi0"
-    import_from  = var.template_image_file_id
+    import_from  = each.value.image_file_id
     size         = 3 # matches the cloud image's 3GB virtual size
   }
 
@@ -76,7 +79,7 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
 
   # CLONE FROM TEMPLATE
   clone {
-    vm_id = proxmox_virtual_environment_vm.template.vm_id
+    vm_id = proxmox_virtual_environment_vm.template[var.proxmox_node].vm_id
     full  = true
   }
 
