@@ -1,6 +1,6 @@
-# Terraform Proxmox Homelab
+# OpenTofu Proxmox Homelab
 
-Terraform + Ansible configuration for Proxmox VE homelab infrastructure including K3s cluster, LXC containers, and Cloudflare Tunnel.
+OpenTofu + Ansible configuration for Proxmox VE homelab infrastructure including K3s cluster, LXC containers, and Cloudflare Tunnel.
 
 ## Infrastructure
 
@@ -79,7 +79,7 @@ sudo nmcli connection up "WIFI_SSID"
 
 ## State Backend (Cloudflare R2)
 
-State is stored remotely in a Cloudflare R2 bucket via Terraform's S3-compatible backend (`backend.tf`):
+State is stored remotely in a Cloudflare R2 bucket via OpenTofu's S3-compatible backend (`backend.tf`):
 
 - **Bucket:** `iac-state`
 - **Key:** `homelab/proxmox/terraform.tfstate`
@@ -99,7 +99,7 @@ Create an R2 API token with Object Read & Write on the `iac-state` bucket, fill 
 
 ```bash
 direnv allow
-terraform init
+tofu init
 ```
 
 <!-- BEGIN_TF_DOCS -->
@@ -107,7 +107,6 @@ terraform init
 
 | Name | Version |
 | ---- | ------- |
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | ~> 1.13 |
 | <a name="requirement_cloudflare"></a> [cloudflare](#requirement\_cloudflare) | ~> 5.27 |
 | <a name="requirement_http"></a> [http](#requirement\_http) | ~> 3.0 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | ~> 2.5 |

@@ -67,6 +67,7 @@ rule "terraform_required_providers" {
   enabled = true
 }
 
+# OpenTofu ignores required_version; versions.tf pins it with a language block instead
 rule "terraform_required_version" {
-  enabled = true
+  enabled = false
 }
