@@ -3,8 +3,8 @@
 - name: Start postgres container
   community.proxmox.proxmox:
     api_host: "{{ pm_api_host }}"
-    api_user: "{{ pm_api_user }}"
-    api_password: "{{ pm_api_password }}"
+    api_token_id: "{{ pm_api_token_id }}"
+    api_token_secret: "{{ pm_api_token_secret }}"
     node: "{{ pm_node }}"
     vmid: "{{ postgres_ctid }}"
     state: started

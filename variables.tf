@@ -6,19 +6,30 @@ variable "proxmox" {
     node     = string
     insecure = bool
     ssh_user = string
-    ssh_port = optional(number, 22)
+    ssh_port = optional(number, 2222)
   })
+}
+
+variable "proxmox_nodes" {
+  description = "Proxmox node names and their SSH addresses"
+  type        = map(string)
+  default = {
+    pve01 = "192.168.1.250"
+    pve02 = "192.168.1.251"
+  }
 }
 
 variable "proxmox_auth" {
   description = "Proxmox authentication credentials"
   type = object({
-    api_token    = optional(string, "")
-    username     = optional(string, "")
-    password     = optional(string, "")
-    ssh_password = optional(string, "")
+    api_token = string
   })
   sensitive = true
+
+  validation {
+    condition     = can(regex("^[^!]+![^=]+=.+$", var.proxmox_auth.api_token))
+    error_message = "proxmox_auth.api_token must be in the form user@realm!tokenid=secret."
+  }
 }
 
 variable "node_name" {
