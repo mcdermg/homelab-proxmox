@@ -1,0 +1,6 @@
+---
+# roles/librespeed/defaults/main.yaml
+# Pinned release of librespeed/speedtest-rust (the community-scripts helper now installs this)
+librespeed_version: v1.4.0
+librespeed_deb: librespeed-rs-x86_64-unknown-linux-gnu.deb
+librespeed_sha256: 7d9bca92c509108159722de388deae195c48836340b1815420ec141e05293fe9

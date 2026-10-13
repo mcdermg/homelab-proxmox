@@ -337,6 +337,37 @@ variable "lxc_containers" {
     tags = optional(list(string), [])
   }))
   default = {
+    # Plain Debian 13 containers, configured over SSH by Ansible (sizes follow the community-scripts helpers)
+    librespeed = {
+      vm_id            = 111
+      name             = "librespeed"
+      template_file_id = "debian-13-standard_13.1-2_amd64.tar.zst"
+      os_type          = "debian"
+      cores            = 1
+      memory           = 512
+      disk_size        = 4
+      swap             = 256
+      ip_address       = "192.168.1.111"
+      features = {
+        nesting = true
+      }
+      tags = ["debian"]
+    }
+    pulse = {
+      vm_id            = 112
+      name             = "pulse"
+      template_file_id = "debian-13-standard_13.1-2_amd64.tar.zst"
+      os_type          = "debian"
+      cores            = 1
+      memory           = 1024
+      disk_size        = 8
+      swap             = 256
+      ip_address       = "192.168.1.112"
+      features = {
+        nesting = true
+      }
+      tags = ["debian", "monitoring"]
+    }
     cloudflared = {
       vm_id            = 113
       name             = "cloudflared"

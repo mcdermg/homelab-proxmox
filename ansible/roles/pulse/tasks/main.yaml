@@ -1,0 +1,164 @@
+---
+# roles/pulse/tasks/main.yaml
+# Install mirrors the community-scripts helper (ct/pulse.sh); setup uses Pulse's API instead of the browser
+
+# INSTALL
+- name: Install Pulse dependencies
+  ansible.builtin.apt:
+    name:
+      - diffutils
+      - polkitd
+    state: present
+    update_cache: true
+
+- name: Create the pulse service user
+  ansible.builtin.user:
+    name: pulse
+    system: true
+    home: /opt/pulse-home
+    create_home: true
+    shell: /usr/sbin/nologin
+
+- name: Create Pulse directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: pulse
+    group: pulse
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: /opt/pulse, mode: '0755' }
+    - { path: /etc/pulse, mode: '0700' }
+
+- name: Download the pinned Pulse release
+  ansible.builtin.get_url:
+    url: "https://github.com/rcourtman/Pulse/releases/download/{{ pulse_version }}/pulse-{{ pulse_version }}-linux-amd64.tar.gz"
+    dest: "/tmp/pulse-{{ pulse_version }}-linux-amd64.tar.gz"
+    checksum: "sha256:{{ pulse_sha256 }}"
+    mode: '0644'
+
+# The archive has bin/pulse at its root; the marker file makes a version bump re-extract
+- name: Extract Pulse
+  ansible.builtin.unarchive:
+    src: "/tmp/pulse-{{ pulse_version }}-linux-amd64.tar.gz"
+    dest: /opt/pulse
+    remote_src: true
+    owner: pulse
+    group: pulse
+    creates: "/opt/pulse/.installed-{{ pulse_version }}"
+  notify: Restart pulse
+
+- name: Record the installed Pulse version
+  ansible.builtin.copy:
+    content: "{{ pulse_version }}\n"
+    dest: "/opt/pulse/.installed-{{ pulse_version }}"
+    owner: pulse
+    group: pulse
+    mode: '0644'
+
+- name: Link the pulse binary onto the PATH
+  ansible.builtin.file:
+    src: /opt/pulse/bin/pulse
+    dest: /usr/local/bin/pulse
+    state: link
+
+- name: Install the Pulse systemd unit
+  ansible.builtin.template:
+    src: pulse.service.j2
+    dest: /etc/systemd/system/pulse.service
+    mode: '0644'
+  notify: Restart pulse
+
+- name: Start and enable Pulse
+  ansible.builtin.systemd:
+    name: pulse
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Apply any pending Pulse restart
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for the Pulse API
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: 7655
+    timeout: 120
+
+# FIRST-TIME SETUP
+# Quick setup writes /etc/pulse/.env and deletes the bootstrap token, so .env existing means setup is done
+- name: Check whether Pulse authentication is configured
+  ansible.builtin.stat:
+    path: /etc/pulse/.env
+  register: pulse_auth_env
+
+- name: Read the Pulse bootstrap token
+  ansible.builtin.command:
+    cmd: /usr/local/bin/pulse bootstrap-token
+  environment:
+    PULSE_DATA_DIR: /etc/pulse
+  register: pulse_bootstrap
+  until: pulse_bootstrap.rc == 0
+  retries: 12
+  delay: 5
+  changed_when: false
+  no_log: true
+  when: not pulse_auth_env.stat.exists
+
+- name: Create the Pulse admin account and API token
+  ansible.builtin.uri:
+    url: "{{ pulse_api_url }}/api/security/quick-setup"
+    method: POST
+    headers:
+      X-Setup-Token: "{{ pulse_bootstrap.stdout | regex_search('Token:\\s+(\\S+)', '\\1') | first }}"
+    body_format: json
+    body:
+      username: "{{ pulse_admin_user }}"
+      password: "{{ pulse_admin_password }}"
+      apiToken: "{{ pulse_api_token }}"
+    status_code: 200
+  changed_when: true
+  no_log: true
+  when: not pulse_auth_env.stat.exists
+
+# PROXMOX CONNECTION
+# Pulse pins the certificate by SHA-256; pveproxy serves pveproxy-ssl.pem if one was uploaded, else pve-ssl.pem
+- name: Read the Proxmox API certificate fingerprint
+  ansible.builtin.shell:
+    cmd: >-
+      openssl x509 -noout -fingerprint -sha256 -in /etc/pve/local/pveproxy-ssl.pem 2>/dev/null
+      || openssl x509 -noout -fingerprint -sha256 -in /etc/pve/local/pve-ssl.pem
+  delegate_to: "{{ groups['proxmox'][0] }}"
+  become: true
+  register: pulse_pve_fingerprint
+  changed_when: false
+
+- name: List the Proxmox connections in Pulse
+  ansible.builtin.uri:
+    url: "{{ pulse_api_url }}/api/config/nodes"
+    headers:
+      X-API-Token: "{{ pulse_api_token }}"
+    return_content: true
+  register: pulse_nodes
+  no_log: true
+
+# One connection covers the cluster; Pulse discovers the other nodes from it
+- name: Add the Proxmox cluster to Pulse
+  ansible.builtin.uri:
+    url: "{{ pulse_api_url }}/api/config/nodes"
+    method: POST
+    headers:
+      X-API-Token: "{{ pulse_api_token }}"
+    body_format: json
+    body:
+      type: pve
+      name: "{{ pulse_connection_name }}"
+      host: "https://{{ hostvars[groups['proxmox'][0]].pm_api_host }}:8006"
+      tokenName: "{{ pulse_pve_token_id }}"
+      tokenValue: "{{ pulse_pve_token_secret }}"
+      verifySSL: true
+      fingerprint: "{{ pulse_pve_fingerprint.stdout.split('=') | last }}"
+    status_code: [200, 201]
+  changed_when: true
+  no_log: true
+  when: pulse_nodes.json | selectattr('type', 'equalto', 'pve') | list | length == 0

@@ -1,0 +1,19 @@
+[Unit]
+Description=Pulse Monitoring Server
+After=network.target
+
+[Service]
+Type=simple
+User=pulse
+Group=pulse
+WorkingDirectory=/opt/pulse
+ExecStart=/opt/pulse/bin/pulse
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PULSE_DATA_DIR=/etc/pulse"
+
+[Install]
+WantedBy=multi-user.target

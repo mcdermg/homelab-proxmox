@@ -1,0 +1,7 @@
+---
+# roles/pulse/handlers/main.yaml
+- name: Restart pulse
+  ansible.builtin.systemd:
+    name: pulse
+    state: restarted
+    daemon_reload: true
