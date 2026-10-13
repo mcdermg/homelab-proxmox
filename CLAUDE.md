@@ -30,10 +30,11 @@ K3s embedded etcd requires an odd number of control nodes (3, 5, 7) for quorum. 
 **OpenTofu-Managed (Proxmox VMs):**
 - `k3s-control-tf-01` (192.168.1.210) - Control plane, VM ID 210, pve01
 - `k3s-control-tf-02` (192.168.1.211) - Control plane, VM ID 211, pve02
-- `k3s-node-tf-01` (192.168.1.215) - Worker, VM ID 215, pve01
-- `k3s-node-tf-02` (192.168.1.216) - Worker, VM ID 216, pve01
+- `k3s-worker-tf-01` (192.168.1.215) - Worker, VM ID 215, pve01
+- `k3s-worker-tf-02` (192.168.1.216) - Worker, VM ID 216, pve01
+- `k3s-worker-tf-03` to `-05` (192.168.1.217–219) - Workers, VM IDs 217–219, pve02
 
-Placement is `node_name` per entry in `k3s_vms` / `lxc_containers` (validated against `proxmox_nodes`), falling back to `proxmox.node`. The two Proxmox control planes sit on different nodes so one node failure doesn't take etcd quorum with it.
+Placement is `node_name` per entry (validated against `proxmox_nodes`): required in `k3s_vms`, optional in `lxc_containers` where it falls back to `proxmox.node`. The two Proxmox control planes sit on different nodes so one node failure doesn't take etcd quorum with it.
 
 **Ansible-Managed (Physical Raspberry Pis):**
 - Pi 4 (192.168.1.241) - Control plane [HA quorum]
@@ -42,7 +43,7 @@ Placement is `node_name` per entry in `k3s_vms` / `lxc_containers` (validated ag
 ### IP Addressing Scheme
 
 **Convention:** Last octet matches VM ID
-Control plane VMs use VM IDs/IPs 210–214 and workers use 215–220. Only two of each are used for now, leaving room for expansion.
+Control plane VMs use VM IDs/IPs 210–214 and workers use 215–220, set as ranges in `var.k3s_roles`. A `k3s_vms` entry is keyed `<role>_<NN>` and only sets `node_name` (plus optional `cores`/`memory`); the VM ID, IP and name are derived in `local.k3s_vms` in `main.tf`, so `worker_03` becomes VM 217, `192.168.1.217`, `k3s-worker-tf-03`.
 
 ## Network Architecture
 
@@ -83,10 +84,11 @@ ISP Router (192.168.0.1)
                     │
                     ├── Proxmox pve01 (192.168.1.250)
                     │   ├── k3s-control-tf-01 (192.168.1.210) - Control VM
-                    │   ├── k3s-node-tf-01 (192.168.1.215) - Worker VM
-                    │   └── k3s-node-tf-02 (192.168.1.216) - Worker VM
+                    │   ├── k3s-worker-tf-01 (192.168.1.215) - Worker VM
+                    │   └── k3s-worker-tf-02 (192.168.1.216) - Worker VM
                     ├── Proxmox pve02 (192.168.1.251)
-                    │   └── k3s-control-tf-02 (192.168.1.211) - Control VM
+                    │   ├── k3s-control-tf-02 (192.168.1.211) - Control VM
+                    │   └── k3s-worker-tf-03 to -05 (192.168.1.217–219) - Worker VMs
                     ├── Pi 4 (192.168.1.241)
                     ├── Pi 3 (192.168.1.242)
                     ├── Container (192.168.1.249) - ISP Monitor
@@ -130,7 +132,7 @@ homelab-proxmox/
 
 1. **DRY Principle**: NEVER hardcode values that are used in multiple places
    - ❌ BAD: `ip_address = "192.168.0.90"` scattered throughout
-   - ✅ GOOD: `ip_address = var.k3s_vms["control_01"].ip_address`
+   - ✅ GOOD: `ip_address = local.k3s_vms["control_01"].ip_address`
 
 2. **Comment Style**: Simple section headers only
    - ❌ BAD: `# ============================================================================`
@@ -144,21 +146,21 @@ homelab-proxmox/
    ```hcl
    locals {
      vm_ip_configs = {
-       for key, vm in var.k3s_vms :
+       for key, vm in var.cluster_nodes :
        key => "${vm.ip_address}${var.network_cidr_suffix}"
      }
    }
    ```
 
 5. **Use `for_each` for Collections**: Never duplicate resource blocks
-   - VMs: `for_each = var.k3s_vms`
+   - VMs: `for_each = local.k3s_vms`
    - Single resource definition handles all nodes
 
 ### Resource Naming
 
 - Resource names: snake_case (e.g., `k3s_nodes`, `control_plane`)
 - Variable names: snake_case with descriptive names (e.g., `template_storage_pool`, `network_bridge`)
-- VM names: kebab-case (e.g., `k3s-control-tf-01`, `k3s-node-tf-01`)
+- VM names: kebab-case (e.g., `k3s-control-tf-01`, `k3s-worker-tf-01`)
 - Tags: lowercase, descriptive (e.g., `["terraform", "k3s", "control"]`)
 - Comments: Concise, describe purpose not implementation
 
@@ -252,7 +254,8 @@ Variables are grouped by function using object types:
 - **k3s_defaults**: Default k3s VM configuration (disk, qemu agent, behavior)
 - **network**: Network configuration (gateway, CIDR suffix)
 - **vm_cloudinit**: Cloud-init settings (user, password, SSH keys)
-- **k3s_vms**: k3s VM specifications (map of objects)
+- **k3s_roles**: Per role (control, worker): VM ID range and default cores/memory
+- **k3s_vms**: k3s VMs keyed `<role>_<NN>`, each with `node_name` and optional `cores`/`memory`
 - **k3s_pi_01_ip**, **k3s_pi_02_ip**: Raspberry Pi IPs for the generated Ansible inventory
 - **lxc_defaults**, **lxc_containers**: LXC defaults and container specifications (map of objects)
 - **gitea_db_password**, **gitea_admin_password**: Gitea credentials for the init scripts
@@ -302,29 +305,26 @@ variable "k3s_defaults" {
 }
 ```
 
-**K3s VMs Map** (map of objects):
+**K3s VMs Map** (map of objects, keyed `<role>_<NN>`; validated against `k3s_roles` ranges and `proxmox_nodes`):
 ```hcl
 variable "k3s_vms" {
   type = map(object({
-    vm_id      = number
-    name       = string
-    cores      = number
-    memory     = number
-    ip_address = string
-    role       = string
-    node_name  = optional(string) # defaults to var.proxmox.node
+    node_name = string
+    cores     = optional(number) # defaults to the role's cores
+    memory    = optional(number) # defaults to the role's memory
   }))
 }
 ```
+`local.k3s_vms` in `main.tf` expands each entry to `role`, `name`, `vm_id`, `ip_address`, `node_name`, `cores` and `memory` for the module.
 
 **Usage in resources** (`modules/k3s_cluster/main.tf`, inputs passed from `module "k3s_cluster"` in `main.tf`):
 ```hcl
 resource "proxmox_virtual_environment_vm" "k3s_nodes" {
-  for_each = var.cluster_nodes # var.k3s_vms
+  for_each = var.cluster_nodes # local.k3s_vms
 
   name      = each.value.name
-  node_name = local.vm_nodes[each.key] # node_name, else var.proxmox.node
-  migrate   = true                      # node change migrates, clone is in ignore_changes
+  node_name = each.value.node_name # clones the template on this node
+  migrate   = true                  # node change migrates, clone is in ignore_changes
   vm_id     = each.value.vm_id
 
   disk {

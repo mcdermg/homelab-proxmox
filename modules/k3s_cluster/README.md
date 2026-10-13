@@ -24,6 +24,7 @@ module "k3s_cluster" {
       memory     = 4096
       ip_address = "192.168.1.210"
       role       = "control"
+      node_name  = "pve01"
     }
     worker_01 = {
       vm_id      = 215
@@ -32,11 +33,11 @@ module "k3s_cluster" {
       memory     = 2048
       ip_address = "192.168.1.215"
       role       = "worker"
+      node_name  = "pve02" # clones that node's template
     }
   }
 
   # Proxmox settings
-  proxmox_node   = "pve01"
   storage_pool   = "nvme-storage"
   network_bridge = "vmbr0"
 
@@ -87,13 +88,12 @@ No modules.
 | <a name="input_cloudinit_password"></a> [cloudinit\_password](#input\_cloudinit\_password) | Cloud-init user account password | `string` | n/a | yes |
 | <a name="input_cloudinit_ssh_key"></a> [cloudinit\_ssh\_key](#input\_cloudinit\_ssh\_key) | SSH public key for cloud-init user | `string` | `""` | no |
 | <a name="input_cloudinit_username"></a> [cloudinit\_username](#input\_cloudinit\_username) | Cloud-init user account username | `string` | n/a | yes |
-| <a name="input_cluster_nodes"></a> [cluster\_nodes](#input\_cluster\_nodes) | K3s cluster node specifications | <pre>map(object({<br/>    vm_id      = number<br/>    name       = string<br/>    cores      = number<br/>    memory     = number<br/>    ip_address = string<br/>    role       = string           # "control" or "worker"<br/>    node_name  = optional(string) # defaults to var.proxmox_node<br/>  }))</pre> | n/a | yes |
+| <a name="input_cluster_nodes"></a> [cluster\_nodes](#input\_cluster\_nodes) | K3s cluster node specifications | <pre>map(object({<br/>    vm_id      = number<br/>    name       = string<br/>    cores      = number<br/>    memory     = number<br/>    ip_address = string<br/>    role       = string # "control" or "worker"<br/>    node_name  = string<br/>  }))</pre> | n/a | yes |
 | <a name="input_default_disk_interface"></a> [default\_disk\_interface](#input\_default\_disk\_interface) | Default disk interface (e.g., 'scsi0') | `string` | `"scsi0"` | no |
 | <a name="input_default_disk_size"></a> [default\_disk\_size](#input\_default\_disk\_size) | Default disk size in GB | `number` | `17` | no |
 | <a name="input_network_bridge"></a> [network\_bridge](#input\_network\_bridge) | The network bridge for VM network devices | `string` | n/a | yes |
 | <a name="input_network_cidr_suffix"></a> [network\_cidr\_suffix](#input\_network\_cidr\_suffix) | CIDR suffix for IP addresses (e.g., '/24') | `string` | n/a | yes |
 | <a name="input_network_gateway"></a> [network\_gateway](#input\_network\_gateway) | The network gateway for VMs | `string` | n/a | yes |
-| <a name="input_proxmox_node"></a> [proxmox\_node](#input\_proxmox\_node) | The Proxmox node for VMs that don't set node\_name | `string` | n/a | yes |
 | <a name="input_qemu_agent_enabled"></a> [qemu\_agent\_enabled](#input\_qemu\_agent\_enabled) | Enable QEMU guest agent | `bool` | `false` | no |
 | <a name="input_qemu_agent_timeout"></a> [qemu\_agent\_timeout](#input\_qemu\_agent\_timeout) | QEMU agent timeout | `string` | `"4m"` | no |
 | <a name="input_storage_pool"></a> [storage\_pool](#input\_storage\_pool) | The storage pool for VM disks and cloud-init | `string` | n/a | yes |

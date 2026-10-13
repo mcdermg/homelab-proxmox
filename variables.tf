@@ -237,82 +237,52 @@ variable "gitea_admin_password" {
 }
 
 # K3S CLUSTER CONFIGURATION
-variable "k3s_vms" {
-  description = "K3s cluster VM specifications"
+variable "k3s_roles" {
+  description = "k3s VM roles: VM ID range (VM ID = last IP octet) and default size"
   type = map(object({
-    vm_id      = number
-    name       = string
-    cores      = number
-    memory     = number
-    ip_address = string
-    role       = string
-    node_name  = optional(string) # defaults to var.proxmox.node
+    first_id = number
+    last_id  = number
+    cores    = number
+    memory   = number
   }))
   default = {
-    control_01 = {
-      vm_id      = 210
-      name       = "k3s-control-tf-01"
-      cores      = 2
-      memory     = 2048
-      ip_address = "192.168.1.210"
-      role       = "control"
-    }
-    control_02 = {
-      vm_id      = 211
-      name       = "k3s-control-tf-02"
-      cores      = 2
-      memory     = 2048
-      ip_address = "192.168.1.211"
-      role       = "control"
-      node_name  = "pve02" # control planes on different nodes
-    }
-    worker_01 = {
-      vm_id      = 215
-      name       = "k3s-node-tf-01"
-      cores      = 2
-      memory     = 2048
-      ip_address = "192.168.1.215"
-      role       = "node"
-    }
-    worker_02 = {
-      vm_id      = 216
-      name       = "k3s-node-tf-02"
-      cores      = 2
-      memory     = 2048
-      ip_address = "192.168.1.216"
-      role       = "node"
-    }
-    worker_03 = {
-      vm_id      = 217
-      name       = "k3s-node-tf-03"
-      cores      = 2
-      memory     = 2048
-      ip_address = "192.168.1.217"
-      role       = "node"
-      node_name  = "pve02"
-    }
-    worker_04 = {
-      vm_id      = 218
-      name       = "k3s-node-tf-04"
-      cores      = 2
-      memory     = 2048
-      ip_address = "192.168.1.218"
-      role       = "node"
-      node_name  = "pve02"
-    }
-    worker_05 = {
-      vm_id      = 219
-      name       = "k3s-node-tf-05"
-      cores      = 2
-      memory     = 2048
-      ip_address = "192.168.1.219"
-      role       = "node"
-      node_name  = "pve02"
-    }
+    control = { first_id = 210, last_id = 214, cores = 2, memory = 2048 }
+    worker  = { first_id = 215, last_id = 220, cores = 2, memory = 4096 }
+  }
+}
+
+variable "k3s_vms" {
+  description = "k3s VMs keyed <role>_<NN> (e.g. worker_03); VM ID, IP and name are derived from the key and k3s_roles"
+  type = map(object({
+    node_name = string
+    cores     = optional(number) # defaults to the role's cores
+    memory    = optional(number) # defaults to the role's memory
+  }))
+  default = {
+    control_01 = { node_name = "pve01" }
+    control_02 = { node_name = "pve02" } # control planes on different nodes
+    worker_01  = { node_name = "pve01", memory = 2048 }
+    worker_02  = { node_name = "pve01", memory = 2048 }
+    worker_03  = { node_name = "pve02" }
+    worker_04  = { node_name = "pve02" }
+    worker_05  = { node_name = "pve02" }
+    worker_06  = { node_name = "pve02" }
   }
 
   validation {
-    condition     = alltrue([for vm in var.k3s_vms : vm.node_name == null || contains(keys(var.proxmox_nodes), vm.node_name)])
+    condition = alltrue([
+      for key in keys(var.k3s_vms) : try(
+        can(regex("^[a-z]+_[0-9]{2}$", key)) &&
+        tonumber(split("_", key)[1]) >= 1 &&
+        var.k3s_roles[split("_", key)[0]].first_id + tonumber(split("_", key)[1]) - 1 <= var.k3s_roles[split("_", key)[0]].last_id,
+        false
+      )
+    ])
+    error_message = "k3s_vms keys must be <role>_<NN> (e.g. worker_03), with a role from k3s_roles and NN inside that role's ID range."
+  }
+
+  validation {
+    condition     = alltrue([for vm in var.k3s_vms : contains(keys(var.proxmox_nodes), vm.node_name)])
     error_message = "Each k3s_vms node_name must be a key of var.proxmox_nodes."
   }
 }
@@ -345,7 +315,7 @@ variable "lxc_containers" {
     disk_size = optional(number, 8)
 
     # Placement and network
-    # shortcut: the pct-based Ansible roles (postgres, gitea, bind9, cloudflared) only reach var.proxmox.node, keep those containers there until LAB-65
+    # shortcut: the pct-based Ansible plays (postgres, gitea, bind9, cloudflared) only reach var.proxmox.node; bind9 and cloudflared are on pve02, so don't run their plays until the inventory is per-node (LAB-65)
     node_name  = optional(string) # defaults to var.proxmox.node
     ip_address = string           # Main IP address for the container
 
@@ -410,6 +380,7 @@ variable "lxc_containers" {
       memory           = 512
       disk_size        = 8
       swap             = 256
+      node_name        = "pve02"
       ip_address       = "192.168.1.113"
       started          = false
       features = {
@@ -423,9 +394,10 @@ variable "lxc_containers" {
       template_file_id = "alpine-3.22-default_20250617_amd64.tar.xz"
       os_type          = "alpine"
       cores            = 1
-      memory           = 1024
+      memory           = 512
       disk_size        = 8
       swap             = 256
+      node_name        = "pve02"
       ip_address       = "192.168.1.114"
       started          = false
       features = {
@@ -439,9 +411,10 @@ variable "lxc_containers" {
       template_file_id = "debian-12-turnkey-core_18.1-1_amd64.tar.gz"
       os_type          = "debian"
       cores            = 2
-      memory           = 2048
+      memory           = 512
       disk_size        = 10
       swap             = 512
+      node_name        = "pve02"
       ip_address       = "192.168.1.115"
       started          = false
       features = {

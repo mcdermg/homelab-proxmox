@@ -4,11 +4,6 @@ locals {
     for key, vm in var.cluster_nodes :
     key => "${vm.ip_address}${var.network_cidr_suffix}"
   }
-
-  vm_nodes = {
-    for key, vm in var.cluster_nodes :
-    key => coalesce(vm.node_name, var.proxmox_node)
-  }
 }
 
 # K3S VM TEMPLATE
@@ -74,7 +69,7 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
   description = "K3s ${each.value.role} node - Managed by Terraform"
   tags        = ["terraform", "k3s", each.value.role, replace(each.value.ip_address, ".", "-")]
 
-  node_name = local.vm_nodes[each.key]
+  node_name = each.value.node_name
   vm_id     = each.value.vm_id
 
   # Changing node_name live-migrates the VM instead of recreating it
@@ -88,7 +83,7 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
   # CLONE FROM TEMPLATE
   # The template on the VM's own node
   clone {
-    vm_id = proxmox_virtual_environment_vm.template[local.vm_nodes[each.key]].vm_id
+    vm_id = proxmox_virtual_environment_vm.template[each.value.node_name].vm_id
     full  = true
   }
 
