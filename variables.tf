@@ -81,16 +81,19 @@ variable "iso_downloads" {
     overwrite_unmanaged     = optional(bool, false)
     upload_timeout          = optional(number, 1800)
   }))
+  # Nothing uses these: VMs are cloned from the cloud image template and LXCs use templates.
+  # They were only used for early install testing. Uncomment one if a manual install needs it.
   default = {
-    debian_13_1 = {
-      url = "https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-13.1.0-amd64-netinst.iso"
-    }
-    alpine_322 = {
-      url = "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/x86_64/alpine-standard-3.22.2-x86_64.iso"
-    }
-    ubuntu_2404 = {
-      url = "https://releases.ubuntu.com/24.04.3/ubuntu-24.04.3-live-server-amd64.iso"
-    }
+    # # Archive URL: debian-cd/current/ only holds the latest point release and 404s once it moves on
+    # debian_13_6 = {
+    #   url = "https://cdimage.debian.org/cdimage/archive/13.6.0/amd64/iso-cd/debian-13.6.0-amd64-netinst.iso"
+    # }
+    # alpine_322 = {
+    #   url = "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/x86_64/alpine-standard-3.22.2-x86_64.iso"
+    # }
+    # ubuntu_2404 = {
+    #   url = "https://releases.ubuntu.com/24.04.3/ubuntu-24.04.3-live-server-amd64.iso"
+    # }
   }
 }
 
@@ -118,14 +121,11 @@ variable "lxc_template_downloads" {
     turnkey_debian_12_gitea = {
       url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-12-turnkey-gitea_18.0-1_amd64.tar.gz"
     }
-    turnkey_debian_11_postgresql = {
-      url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-11-turnkey-postgresql_17.1-1_amd64.tar.gz"
-    }
-    turnkey_debian_11_redis = {
-      url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-11-turnkey-redis_17.1-1_amd64.tar.gz"
+    turnkey_debian_12_postgresql = {
+      url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-12-turnkey-postgresql_18.1-1_amd64.tar.gz"
     }
     turnkey_debian_12_core = {
-      url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-12-turnkey-core_18.0-1_amd64.tar.gz"
+      url = "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-12-turnkey-core_18.1-1_amd64.tar.gz"
     }
   }
 }
@@ -340,7 +340,7 @@ variable "lxc_containers" {
     cloudflared = {
       vm_id            = 113
       name             = "cloudflared"
-      template_file_id = "debian-12-turnkey-core_18.0-1_amd64.tar.gz"
+      template_file_id = "debian-12-turnkey-core_18.1-1_amd64.tar.gz"
       os_type          = "debian"
       cores            = 1
       memory           = 512
@@ -372,7 +372,7 @@ variable "lxc_containers" {
     bind9 = {
       vm_id            = 115
       name             = "bind9"
-      template_file_id = "debian-12-turnkey-core_18.0-1_amd64.tar.gz"
+      template_file_id = "debian-12-turnkey-core_18.1-1_amd64.tar.gz"
       os_type          = "debian"
       cores            = 2
       memory           = 2048
@@ -388,7 +388,7 @@ variable "lxc_containers" {
     postgres = {
       vm_id            = 116
       name             = "postgres"
-      template_file_id = "debian-11-turnkey-postgresql_17.1-1_amd64.tar.gz"
+      template_file_id = "debian-12-turnkey-postgresql_18.1-1_amd64.tar.gz"
       os_type          = "debian"
       cores            = 2
       memory           = 2048
