@@ -7,13 +7,14 @@ variable "cluster_nodes" {
     cores      = number
     memory     = number
     ip_address = string
-    role       = string # "control" or "worker"
+    role       = string           # "control" or "worker"
+    node_name  = optional(string) # defaults to var.proxmox_node
   }))
 }
 
 # PROXMOX CONFIGURATION
 variable "proxmox_node" {
-  description = "The Proxmox node where VMs will be created"
+  description = "The Proxmox node for VMs that don't set node_name"
   type        = string
 }
 

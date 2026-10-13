@@ -4,6 +4,11 @@ locals {
     for key, vm in var.cluster_nodes :
     key => "${vm.ip_address}${var.network_cidr_suffix}"
   }
+
+  vm_nodes = {
+    for key, vm in var.cluster_nodes :
+    key => coalesce(vm.node_name, var.proxmox_node)
+  }
 }
 
 # K3S VM TEMPLATE
@@ -69,8 +74,11 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
   description = "K3s ${each.value.role} node - Managed by Terraform"
   tags        = ["terraform", "k3s", each.value.role, replace(each.value.ip_address, ".", "-")]
 
-  node_name = var.proxmox_node
+  node_name = local.vm_nodes[each.key]
   vm_id     = each.value.vm_id
+
+  # Changing node_name live-migrates the VM instead of recreating it
+  migrate = true
 
   on_boot = var.vm_on_boot
   started = var.vm_started
@@ -78,8 +86,9 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
   stop_on_destroy = var.vm_stop_on_destroy
 
   # CLONE FROM TEMPLATE
+  # The template on the VM's own node
   clone {
-    vm_id = proxmox_virtual_environment_vm.template[var.proxmox_node].vm_id
+    vm_id = proxmox_virtual_environment_vm.template[local.vm_nodes[each.key]].vm_id
     full  = true
   }
 
@@ -137,6 +146,8 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
       # Ignore changes to these attributes to prevent unnecessary updates
       started,
       initialization,
+      # Every clone field forces a new VM; after a migration the template ID differs, so ignore it
+      clone,
     ]
   }
 }
