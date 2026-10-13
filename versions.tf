@@ -1,6 +1,11 @@
-terraform {
-  required_version = "~> 1.13"
+# OpenTofu ignores required_version, so the version is pinned here
+language {
+  compatible_with {
+    opentofu = "~> 1.12"
+  }
+}
 
+terraform {
   required_providers {
     proxmox = {
       source  = "bpg/proxmox"
