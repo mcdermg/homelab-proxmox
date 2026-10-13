@@ -11,9 +11,10 @@ variable "proxmox" {
 }
 
 variable "proxmox_nodes" {
-  description = "Proxmox nodes: SSH address and the disks for each node's ZFS storage pool"
+  description = "Proxmox nodes: SSH address, the disks for each node's ZFS storage pool, and the VM ID of its k3s template"
   type = map(object({
-    address = string
+    address        = string
+    template_vm_id = number
     zfs_pool = object({
       devices   = list(string)
       raidlevel = optional(string, "single")
@@ -21,13 +22,15 @@ variable "proxmox_nodes" {
   }))
   default = {
     pve01 = {
-      address = "192.168.1.250"
+      address        = "192.168.1.250"
+      template_vm_id = 9000
       zfs_pool = {
         devices = ["/dev/disk/by-id/nvme-CA3-8D512-Q11_NVMe_LITEON_512GB_TW092X04LOH009BQ0115"]
       }
     }
     pve02 = {
-      address = "192.168.1.251"
+      address        = "192.168.1.251"
+      template_vm_id = 9001
       zfs_pool = {
         devices = ["/dev/disk/by-id/nvme-Micron_2200S_NVMe_512GB__194725011C72"]
       }
@@ -234,12 +237,6 @@ variable "gitea_admin_password" {
 }
 
 # K3S CLUSTER CONFIGURATION
-variable "k3s_template_vm_id" {
-  description = "VM ID of the template to clone for K3s nodes"
-  type        = number
-  default     = 9000
-}
-
 variable "k3s_vms" {
   description = "K3s cluster VM specifications"
   type = map(object({

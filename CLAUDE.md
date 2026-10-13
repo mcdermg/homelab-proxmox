@@ -155,7 +155,7 @@ homelab-proxmox/
 ### Resource Naming
 
 - Resource names: snake_case (e.g., `k3s_nodes`, `control_plane`)
-- Variable names: snake_case with descriptive names (e.g., `k3s_template_vm_id`, `network_bridge`)
+- Variable names: snake_case with descriptive names (e.g., `template_storage_pool`, `network_bridge`)
 - VM names: kebab-case (e.g., `k3s-control-tf-01`, `k3s-node-tf-01`)
 - Tags: lowercase, descriptive (e.g., `["terraform", "k3s", "control"]`)
 - Comments: Concise, describe purpose not implementation
@@ -183,14 +183,14 @@ The bpg Proxmox provider (`bpg/proxmox`) is used instead of the Telmate provider
 
 ### Template Requirements
 
-Template VM 9000 (`var.k3s_template_vm_id`) is created by OpenTofu in `modules/k3s_cluster` (`proxmox_virtual_environment_vm.template`), from the Debian 13 `generic` cloud image downloaded by `vm_image_downloads`. The k3s VMs are full clones of it. Nothing needs to be built by hand with `qm`.
+Each node gets its own k3s template (9000 on pve01, 9001 on pve02, set by `template_vm_id` in `var.proxmox_nodes`), created by OpenTofu in `modules/k3s_cluster` (`proxmox_virtual_environment_vm.template`) from that node's copy of the Debian 13 `generic` cloud image downloaded by `vm_image_downloads`. Templates on local ZFS can't be cloned to another node, so each k3s VM is a full clone of the template on its own node. Nothing needs to be built by hand with `qm`.
 
 ### Disk Operations
 
 - **Disk Interface**: Use `scsi0` for best performance with virtio-scsi controller
 - **Disk Resizing**: Specify total size in `disk.size` - provider handles expansion
 - **File Format**: Use `raw` for better performance vs `qcow2`
-- **Storage Pool**: VM and container disks use `nvme-storage` (a ZFS pool per node from `module.proxmox_node`, plus one cluster-wide storage entry in `main.tf`), ISOs and templates use `nvme-files`, and template 9000 is still on `local-lvm` (set in `locals` in `main.tf`)
+- **Storage Pool**: VM and container disks use `nvme-storage` (a ZFS pool per node from `module.proxmox_node`, plus one cluster-wide storage entry in `main.tf`), ISOs and templates use `nvme-files`, and the k3s templates (9000, 9001) are also on `nvme-storage`
 
 ### Network Configuration
 
@@ -243,14 +243,14 @@ Cloud-init handles:
 Variables are grouped by function using object types:
 - **proxmox**: Connection settings (endpoint, node, insecure, ssh_user, ssh_port)
 - **proxmox_auth**: Proxmox API token (`api_token` only; SSH uses the agent)
-- **proxmox_nodes**: Per node: SSH address and ZFS pool disks (`/dev/disk/by-id` paths); drives the provider SSH blocks, `module.proxmox_node` and the `nvme-storage` entry's node list
+- **proxmox_nodes**: Per node: SSH address, k3s template VM ID and ZFS pool disks (`/dev/disk/by-id` paths); drives the provider SSH blocks, `module.proxmox_node` and the `nvme-storage` entry's node list
 - **apt_repositories**: APT standard repo handles to enable/disable on every node
 - **network_bridge**: Proxmox network bridge
 - **iso_downloads**, **lxc_template_downloads**, **vm_image_downloads**: Files to download to Proxmox storage
 - **k3s_defaults**: Default k3s VM configuration (disk, qemu agent, behavior)
 - **network**: Network configuration (gateway, CIDR suffix)
 - **vm_cloudinit**: Cloud-init settings (user, password, SSH keys)
-- **k3s_template_vm_id**, **k3s_vms**: Template VM ID and k3s VM specifications (map of objects)
+- **k3s_vms**: k3s VM specifications (map of objects)
 - **k3s_pi_01_ip**, **k3s_pi_02_ip**: Raspberry Pi IPs for the generated Ansible inventory
 - **lxc_defaults**, **lxc_containers**: LXC defaults and container specifications (map of objects)
 - **gitea_db_password**, **gitea_admin_password**: Gitea credentials for the init scripts
