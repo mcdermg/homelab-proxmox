@@ -3,6 +3,11 @@ variable "zone_id" {
   type        = string
 }
 
+variable "zone" {
+  description = "Cloudflare zone name, appended to each record key to form the FQDN"
+  type        = string
+}
+
 variable "a_records" {
   description = "Map of A records to create. Key is the record name, value contains ip_address and optional ttl, proxied, comment"
   type = map(object({

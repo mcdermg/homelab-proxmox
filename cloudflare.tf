@@ -77,6 +77,7 @@ module "tunnel_dns_records" {
   source = "./modules/cloudflare_dns"
 
   zone_id = var.cloudflare_zone_id
+  zone    = var.cloudflare_zone
 
   cname_records = {
     for key, service in local.tunnel_services : key => {
