@@ -28,10 +28,12 @@ K3s embedded etcd requires an odd number of control nodes (3, 5, 7) for quorum. 
 ### Node Distribution
 
 **OpenTofu-Managed (Proxmox VMs):**
-- `k3s-control-tf-01` (192.168.1.210) - Control plane, VM ID 210
-- `k3s-control-tf-02` (192.168.1.211) - Control plane, VM ID 211
-- `k3s-node-tf-01` (192.168.1.215) - Worker, VM ID 215
-- `k3s-node-tf-02` (192.168.1.216) - Worker, VM ID 216
+- `k3s-control-tf-01` (192.168.1.210) - Control plane, VM ID 210, pve01
+- `k3s-control-tf-02` (192.168.1.211) - Control plane, VM ID 211, pve02
+- `k3s-node-tf-01` (192.168.1.215) - Worker, VM ID 215, pve01
+- `k3s-node-tf-02` (192.168.1.216) - Worker, VM ID 216, pve01
+
+Placement is `node_name` per entry in `k3s_vms` / `lxc_containers` (validated against `proxmox_nodes`), falling back to `proxmox.node`. The two Proxmox control planes sit on different nodes so one node failure doesn't take etcd quorum with it.
 
 **Ansible-Managed (Physical Raspberry Pis):**
 - Pi 4 (192.168.1.241) - Control plane [HA quorum]
@@ -81,10 +83,10 @@ ISP Router (192.168.0.1)
                     │
                     ├── Proxmox pve01 (192.168.1.250)
                     │   ├── k3s-control-tf-01 (192.168.1.210) - Control VM
-                    │   ├── k3s-control-tf-02 (192.168.1.211) - Control VM
                     │   ├── k3s-node-tf-01 (192.168.1.215) - Worker VM
                     │   └── k3s-node-tf-02 (192.168.1.216) - Worker VM
                     ├── Proxmox pve02 (192.168.1.251)
+                    │   └── k3s-control-tf-02 (192.168.1.211) - Control VM
                     ├── Pi 4 (192.168.1.241)
                     ├── Pi 3 (192.168.1.242)
                     ├── Container (192.168.1.249) - ISP Monitor
@@ -241,7 +243,7 @@ Cloud-init handles:
 
 ### Variable Organization
 Variables are grouped by function using object types:
-- **proxmox**: Connection settings (endpoint, node, insecure, ssh_user, ssh_port)
+- **proxmox**: Connection settings (endpoint, default guest node, insecure, ssh_user, ssh_port)
 - **proxmox_auth**: Proxmox API token (`api_token` only; SSH uses the agent)
 - **proxmox_nodes**: Per node: SSH address, k3s template VM ID and ZFS pool disks (`/dev/disk/by-id` paths); drives the provider SSH blocks, `module.proxmox_node` and the `nvme-storage` entry's node list
 - **apt_repositories**: APT standard repo handles to enable/disable on every node
@@ -310,6 +312,7 @@ variable "k3s_vms" {
     memory     = number
     ip_address = string
     role       = string
+    node_name  = optional(string) # defaults to var.proxmox.node
   }))
 }
 ```
@@ -320,7 +323,8 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
   for_each = var.cluster_nodes # var.k3s_vms
 
   name      = each.value.name
-  node_name = var.proxmox_node # var.proxmox.node
+  node_name = local.vm_nodes[each.key] # node_name, else var.proxmox.node
+  migrate   = true                      # node change migrates, clone is in ignore_changes
   vm_id     = each.value.vm_id
 
   disk {

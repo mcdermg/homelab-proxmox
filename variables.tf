@@ -246,6 +246,7 @@ variable "k3s_vms" {
     memory     = number
     ip_address = string
     role       = string
+    node_name  = optional(string) # defaults to var.proxmox.node
   }))
   default = {
     control_01 = {
@@ -263,6 +264,7 @@ variable "k3s_vms" {
       memory     = 2048
       ip_address = "192.168.1.211"
       role       = "control"
+      node_name  = "pve02" # control planes on different nodes
     }
     worker_01 = {
       vm_id      = 215
@@ -280,6 +282,38 @@ variable "k3s_vms" {
       ip_address = "192.168.1.216"
       role       = "node"
     }
+    worker_03 = {
+      vm_id      = 217
+      name       = "k3s-node-tf-03"
+      cores      = 2
+      memory     = 2048
+      ip_address = "192.168.1.217"
+      role       = "node"
+      node_name  = "pve02"
+    }
+    worker_04 = {
+      vm_id      = 218
+      name       = "k3s-node-tf-04"
+      cores      = 2
+      memory     = 2048
+      ip_address = "192.168.1.218"
+      role       = "node"
+      node_name  = "pve02"
+    }
+    worker_05 = {
+      vm_id      = 219
+      name       = "k3s-node-tf-05"
+      cores      = 2
+      memory     = 2048
+      ip_address = "192.168.1.219"
+      role       = "node"
+      node_name  = "pve02"
+    }
+  }
+
+  validation {
+    condition     = alltrue([for vm in var.k3s_vms : vm.node_name == null || contains(keys(var.proxmox_nodes), vm.node_name)])
+    error_message = "Each k3s_vms node_name must be a key of var.proxmox_nodes."
   }
 }
 
@@ -310,8 +344,10 @@ variable "lxc_containers" {
     swap      = optional(number, 0)
     disk_size = optional(number, 8)
 
-    # Network
-    ip_address = string # Main IP address for the container
+    # Placement and network
+    # shortcut: the pct-based Ansible roles (postgres, gitea, bind9, cloudflared) only reach var.proxmox.node, keep those containers there until LAB-65
+    node_name  = optional(string) # defaults to var.proxmox.node
+    ip_address = string           # Main IP address for the container
 
     # Optional advanced configuration
     description  = optional(string)
@@ -445,6 +481,11 @@ variable "lxc_containers" {
       }
       tags = ["turnkey"]
     }
+  }
+
+  validation {
+    condition     = alltrue([for c in var.lxc_containers : c.node_name == null || contains(keys(var.proxmox_nodes), c.node_name)])
+    error_message = "Each lxc_containers node_name must be a key of var.proxmox_nodes."
   }
 }
 

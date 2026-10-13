@@ -84,7 +84,7 @@ module "k3s_cluster" {
 
   cluster_nodes = var.k3s_vms
 
-  # Proxmox settings
+  # Proxmox settings: default node for VMs without a node_name
   proxmox_node = var.proxmox.node
   storage_pool = proxmox_storage_zfspool.nvme_storage.id
 
@@ -125,7 +125,7 @@ module "k3s_cluster" {
 module "lxc_containers" {
   source = "./modules/lxc_container"
 
-  proxmox_node    = var.proxmox.node
+  proxmox_node    = var.proxmox.node # default node for containers without a node_name
   storage_pool    = proxmox_storage_zfspool.nvme_storage.id
   network_bridge  = var.network_bridge
   network_gateway = var.network.gateway
@@ -137,6 +137,7 @@ module "lxc_containers" {
     for key, container in var.lxc_containers : key => {
       vm_id            = container.vm_id
       name             = container.name
+      node_name        = container.node_name
       template_file_id = "${local.datastore_id}:vztmpl/${container.template_file_id}"
       os_type          = container.os_type
       cores            = container.cores

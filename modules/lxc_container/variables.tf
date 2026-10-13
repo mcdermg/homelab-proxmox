@@ -1,5 +1,5 @@
 variable "proxmox_node" {
-  description = "The name of the Proxmox node where containers will be created"
+  description = "The Proxmox node for containers that don't set node_name"
   type        = string
 }
 
@@ -38,7 +38,8 @@ variable "containers" {
   type = map(object({
     vm_id            = number
     name             = string
-    template_file_id = string # e.g., "local:vztmpl/debian-12-standard_12.0-1_amd64.tar.zst"
+    template_file_id = string           # e.g., "local:vztmpl/debian-12-standard_12.0-1_amd64.tar.zst"
+    node_name        = optional(string) # defaults to var.proxmox_node
 
     # Optional configuration
     description  = optional(string)

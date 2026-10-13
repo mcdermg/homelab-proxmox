@@ -1,8 +1,11 @@
 resource "proxmox_virtual_environment_container" "this" {
   for_each = var.containers
 
-  node_name = var.proxmox_node
+  node_name = coalesce(each.value.node_name, var.proxmox_node)
   vm_id     = each.value.vm_id
+
+  # Changing node_name migrates the container (a restart, not live) instead of recreating it
+  migrate = true
 
   # Container initialization
   description  = try(each.value.description, "Managed by Terraform")
