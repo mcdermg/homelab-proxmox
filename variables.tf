@@ -11,11 +11,27 @@ variable "proxmox" {
 }
 
 variable "proxmox_nodes" {
-  description = "Proxmox node names and their SSH addresses"
-  type        = map(string)
+  description = "Proxmox nodes: SSH address and the disks for each node's ZFS storage pool"
+  type = map(object({
+    address = string
+    zfs_pool = object({
+      devices   = list(string)
+      raidlevel = optional(string, "single")
+    })
+  }))
   default = {
-    pve01 = "192.168.1.250"
-    pve02 = "192.168.1.251"
+    pve01 = {
+      address = "192.168.1.250"
+      zfs_pool = {
+        devices = ["/dev/disk/by-id/nvme-CA3-8D512-Q11_NVMe_LITEON_512GB_TW092X04LOH009BQ0115"]
+      }
+    }
+    pve02 = {
+      address = "192.168.1.251"
+      zfs_pool = {
+        devices = ["/dev/disk/by-id/nvme-Micron_2200S_NVMe_512GB__194725011C72"]
+      }
+    }
   }
 }
 
@@ -42,12 +58,6 @@ variable "proxmox_auth" {
     condition     = can(regex("^[^!]+![^=]+=.+$", var.proxmox_auth.api_token))
     error_message = "proxmox_auth.api_token must be in the form user@realm!tokenid=secret."
   }
-}
-
-variable "node_name" {
-  description = "Name of the Proxmox node to use"
-  type        = string
-  default     = "pve01"
 }
 
 variable "network_bridge" {

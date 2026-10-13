@@ -23,3 +23,13 @@ resource "proxmox_apt_repository" "disabled" {
   index     = each.value.index
   enabled   = false
 }
+
+# ZFS POOL
+# The storage entry is cluster-wide and managed in the root module, so add_storage stays off
+resource "proxmox_node_disk_zfs" "this" {
+  node_name   = var.node_name
+  name        = var.zfs_pool_name
+  devices     = var.zfs_pool.devices
+  raidlevel   = var.zfs_pool.raidlevel
+  add_storage = false
+}

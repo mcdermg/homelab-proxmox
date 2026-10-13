@@ -45,7 +45,7 @@ provider "proxmox" {
       for_each = var.proxmox_nodes
       content {
         name    = node.key
-        address = node.value
+        address = node.value.address
         port    = var.proxmox.ssh_port
       }
     }

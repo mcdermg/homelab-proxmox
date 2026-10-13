@@ -77,6 +77,42 @@ sudo nmcli connection modify "WIFI_SSID" +ipv4.routes "192.168.1.0/24 192.168.0.
 sudo nmcli connection up "WIFI_SSID"
 ```
 
+## Cluster Connectivity
+
+pve01 and pve02 form one Proxmox cluster. OpenTofu reaches both through two connections, both configured in the `provider "proxmox"` block in `versions.tf`.
+
+### API: one endpoint for the cluster
+
+```
+tofu ──HTTPS + API token──► pve01:8006 (proxmox.endpoint)
+                               │
+                               └── request for /nodes/pve02/... is forwarded ──► pve02
+```
+
+- `proxmox.endpoint` and `proxmox_auth.api_token` in `terraform.tfvars` point at pve01 only.
+- Proxmox forwards any API request for another cluster node to that node ([pveproxy](https://pve.proxmox.com/pve-docs/pveproxy.8.html)), so pve02 needs no endpoint or token of its own. API users and tokens are cluster-wide.
+- If pve01 is down, OpenTofu can't manage either node.
+
+### SSH: one entry per node
+
+The provider uses SSH for the few operations the API can't do, such as file uploads. The `ssh` block creates one `node {}` entry per node in `var.proxmox_nodes`, using its `address`, `proxmox.ssh_port` (2222) and `proxmox.ssh_user`, with keys from the SSH agent.
+
+### Which node a resource lands on
+
+Connecting to the cluster and placing a resource on a node are separate. Each resource names its own node:
+
+| Resource | Node setting | Lands on |
+|---|---|---|
+| `module.proxmox_node` (APT repos, ZFS pool) | each key of `var.proxmox_nodes` | pve01 and pve02 |
+| `proxmox_storage_zfspool.nvme_storage` | `nodes = keys(var.proxmox_nodes)` | cluster-wide entry for both |
+| Download modules | `proxmox.node` in `terraform.tfvars` | pve01 |
+| `k3s_cluster`, `lxc_containers` | `proxmox.node` in `terraform.tfvars` | pve01 |
+
+### Where the node details live
+
+- `terraform.tfvars`: the `proxmox` block (endpoint, default guest node, SSH user and port) and `proxmox_auth`. Only pve01's details are needed here.
+- `variables.tf`: the `proxmox_nodes` default lists every node with its SSH address and ZFS pool disks. Adding a node to the cluster starts here.
+
 ## State Backend (Cloudflare R2)
 
 State is stored remotely in a Cloudflare R2 bucket via OpenTofu's S3-compatible backend (`backend.tf`):
@@ -120,6 +156,7 @@ tofu init
 | <a name="provider_cloudflare"></a> [cloudflare](#provider\_cloudflare) | 5.27.0 |
 | <a name="provider_http"></a> [http](#provider\_http) | 3.6.2 |
 | <a name="provider_local"></a> [local](#provider\_local) | 2.9.1 |
+| <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | 0.116.0 |
 | <a name="provider_random"></a> [random](#provider\_random) | 3.9.1 |
 
 ## Modules
@@ -144,6 +181,7 @@ tofu init
 | [local_file.ansible_hosts_file](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file) | resource |
 | [local_file.gitea_init_script](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file) | resource |
 | [local_file.postgres_init_script](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file) | resource |
+| [proxmox_storage_zfspool.nvme_storage](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/storage_zfspool) | resource |
 | [random_id.cloudflared_tunnel_secret](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/id) | resource |
 | [cloudflare_zero_trust_tunnel_cloudflared_token.homelab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/data-sources/zero_trust_tunnel_cloudflared_token) | data source |
 | [http_http.my_ipv4](https://registry.terraform.io/providers/hashicorp/http/latest/docs/data-sources/http) | data source |
@@ -171,10 +209,9 @@ tofu init
 | <a name="input_lxc_template_downloads"></a> [lxc\_template\_downloads](#input\_lxc\_template\_downloads) | LXC container templates to download to Proxmox storage | <pre>map(object({<br/>    url                     = string<br/>    file_name               = optional(string)<br/>    checksum                = optional(string)<br/>    checksum_algorithm      = optional(string) # "md5", "sha1", "sha224", "sha256", "sha384", "sha512"<br/>    decompression_algorithm = optional(string) # "gz", "lzo", "zst", "bz2"<br/>    verify                  = optional(bool, true)<br/>    overwrite               = optional(bool, true)<br/>    overwrite_unmanaged     = optional(bool, false)<br/>    upload_timeout          = optional(number, 1800)<br/>  }))</pre> | <pre>{<br/>  "alpine_322": {<br/>    "url": "http://download.proxmox.com/images/system/alpine-3.22-default_20250617_amd64.tar.xz"<br/>  },<br/>  "debian_13": {<br/>    "url": "http://download.proxmox.com/images/system/debian-13-standard_13.1-2_amd64.tar.zst"<br/>  },<br/>  "turnkey_debian_11_postgresql": {<br/>    "url": "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-11-turnkey-postgresql_17.1-1_amd64.tar.gz"<br/>  },<br/>  "turnkey_debian_11_redis": {<br/>    "url": "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-11-turnkey-redis_17.1-1_amd64.tar.gz"<br/>  },<br/>  "turnkey_debian_12_core": {<br/>    "url": "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-12-turnkey-core_18.0-1_amd64.tar.gz"<br/>  },<br/>  "turnkey_debian_12_gitea": {<br/>    "url": "http://mirror.turnkeylinux.org/turnkeylinux/images/proxmox/debian-12-turnkey-gitea_18.0-1_amd64.tar.gz"<br/>  }<br/>}</pre> | no |
 | <a name="input_network"></a> [network](#input\_network) | Network configuration for VMs | <pre>object({<br/>    gateway     = string<br/>    cidr_suffix = string<br/>  })</pre> | <pre>{<br/>  "cidr_suffix": "/24",<br/>  "gateway": "192.168.1.1"<br/>}</pre> | no |
 | <a name="input_network_bridge"></a> [network\_bridge](#input\_network\_bridge) | Network bridge to use for VMs | `string` | `"vmbr0"` | no |
-| <a name="input_node_name"></a> [node\_name](#input\_node\_name) | Name of the Proxmox node to use | `string` | `"pve01"` | no |
 | <a name="input_proxmox"></a> [proxmox](#input\_proxmox) | Proxmox connection configuration | <pre>object({<br/>    endpoint = string<br/>    node     = string<br/>    insecure = bool<br/>    ssh_user = string<br/>    ssh_port = optional(number, 2222)<br/>  })</pre> | n/a | yes |
 | <a name="input_proxmox_auth"></a> [proxmox\_auth](#input\_proxmox\_auth) | Proxmox authentication credentials | <pre>object({<br/>    api_token = string<br/>  })</pre> | n/a | yes |
-| <a name="input_proxmox_nodes"></a> [proxmox\_nodes](#input\_proxmox\_nodes) | Proxmox node names and their SSH addresses | `map(string)` | <pre>{<br/>  "pve01": "192.168.1.250",<br/>  "pve02": "192.168.1.251"<br/>}</pre> | no |
+| <a name="input_proxmox_nodes"></a> [proxmox\_nodes](#input\_proxmox\_nodes) | Proxmox nodes: SSH address and the disks for each node's ZFS storage pool | <pre>map(object({<br/>    address = string<br/>    zfs_pool = object({<br/>      devices   = list(string)<br/>      raidlevel = optional(string, "single")<br/>    })<br/>  }))</pre> | <pre>{<br/>  "pve01": {<br/>    "address": "192.168.1.250",<br/>    "zfs_pool": {<br/>      "devices": [<br/>        "/dev/disk/by-id/nvme-CA3-8D512-Q11_NVMe_LITEON_512GB_TW092X04LOH009BQ0115"<br/>      ]<br/>    }<br/>  },<br/>  "pve02": {<br/>    "address": "192.168.1.251",<br/>    "zfs_pool": {<br/>      "devices": [<br/>        "/dev/disk/by-id/nvme-Micron_2200S_NVMe_512GB__194725011C72"<br/>      ]<br/>    }<br/>  }<br/>}</pre> | no |
 | <a name="input_vm_cloudinit"></a> [vm\_cloudinit](#input\_vm\_cloudinit) | Cloud-init configuration for VMs | <pre>object({<br/>    username       = string<br/>    password       = string<br/>    ssh_public_key = optional(string, "")<br/>  })</pre> | n/a | yes |
 | <a name="input_vm_image_downloads"></a> [vm\_image\_downloads](#input\_vm\_image\_downloads) | VM disk images to download to Proxmox storage | <pre>map(object({<br/>    url                     = string<br/>    file_name               = optional(string)<br/>    checksum                = optional(string)<br/>    checksum_algorithm      = optional(string) # "md5", "sha1", "sha224", "sha256", "sha384", "sha512"<br/>    decompression_algorithm = optional(string) # "gz", "lzo", "zst", "bz2"<br/>    verify                  = optional(bool, true)<br/>    overwrite               = optional(bool, true)<br/>    overwrite_unmanaged     = optional(bool, false)<br/>    upload_timeout          = optional(number, 1800)<br/>  }))</pre> | <pre>{<br/>  "debian_13_generic": {<br/>    "checksum": "6f0f93335bdef4ccf523c4317cc663ea52ca23b862667785f3d6d186ab4674a937385ccff0c55996b4b2e4c19e440cdf211e2a75ffa2f6548037ab43950c841d",<br/>    "checksum_algorithm": "sha512",<br/>    "url": "https://cloud.debian.org/images/cloud/trixie/20261001-2618/debian-13-generic-amd64-20261001-2618.qcow2"<br/>  }<br/>}</pre> | no |
 
