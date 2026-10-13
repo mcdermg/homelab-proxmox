@@ -137,12 +137,12 @@ resource "local_file" "ansible_hosts_file" {
 
   content = templatefile("${path.module}/templates/ansible_hosts.ini.tftpl", {
     # Proxmox host connection details
-    proxmox_node         = var.proxmox.node
-    proxmox_host         = replace(replace(var.proxmox.endpoint, "https://", ""), ":8006", "")
-    proxmox_ssh_user     = var.proxmox.ssh_user
-    proxmox_ssh_port     = var.proxmox.ssh_port
-    proxmox_api_user     = var.proxmox_auth.username
-    proxmox_api_password = var.proxmox_auth.password
+    proxmox_node             = var.proxmox.node
+    proxmox_host             = replace(replace(var.proxmox.endpoint, "https://", ""), ":8006", "")
+    proxmox_ssh_user         = var.proxmox.ssh_user
+    proxmox_ssh_port         = var.proxmox.ssh_port
+    proxmox_api_token_id     = split("=", var.proxmox_auth.api_token)[0]
+    proxmox_api_token_secret = split("=", var.proxmox_auth.api_token)[1]
 
     # Container details for pct operations
     postgres_ctid    = var.lxc_containers.postgres.vm_id

@@ -160,16 +160,14 @@ homelab-proxmox/
 
 ### Authentication Methods
 
-**API Token (Primary - Recommended)**
-- More secure, granular permissions
+**API Token (in use)**
 - Token format: `username@realm!tokenid=uuid`
 - Create token: `pveum user token add terraform-prov@pve terraform-token --privsep=0`
 - Set in terraform.tfvars: `proxmox_auth.api_token = "terraform-prov@pve!terraform-token=xxx"`
+- The Ansible inventory gets the token split into `pm_api_token_id` / `pm_api_token_secret` for the `community.proxmox` calls
+- Some operations only work as `root@pam` (VM `arch`, feature flags on privileged containers); see the bpg provider docs
 
-**Username/Password (Alternative, currently in use)**
-- Simpler but less secure
-- Useful for initial testing
-- `versions.tf` currently has `api_token` commented out and uses `proxmox_auth.username`/`password` (`root@pam`). Swap the comments to use the token.
+**SSH:** the provider's SSH port is only set per node, via `ssh { node {} }` built from `var.proxmox_nodes`. Both nodes use `var.proxmox.ssh_port` (default 2222).
 
 ### Provider Configuration
 
@@ -240,7 +238,7 @@ Cloud-init handles:
 ### Variable Organization
 Variables are grouped by function using object types:
 - **proxmox**: Connection settings (endpoint, node, insecure, ssh_user, ssh_port)
-- **proxmox_auth**: Authentication credentials (api_token, username, password, ssh_password)
+- **proxmox_auth**: Proxmox API token (`api_token` only; SSH uses the agent)
 - **node_name**, **network_bridge**: Proxmox node and bridge
 - **iso_downloads**, **lxc_template_downloads**, **vm_image_downloads**: Files to download to Proxmox storage
 - **k3s_defaults**: Default k3s VM configuration (disk, qemu agent, behavior)
@@ -262,7 +260,7 @@ variable "proxmox" {
     node     = string
     insecure = bool
     ssh_user = string
-    ssh_port = optional(number, 22)
+    ssh_port = optional(number, 2222)
   })
 }
 ```
@@ -271,10 +269,7 @@ variable "proxmox" {
 ```hcl
 variable "proxmox_auth" {
   type = object({
-    api_token    = optional(string, "")
-    username     = optional(string, "")
-    password     = optional(string, "")
-    ssh_password = optional(string, "")
+    api_token = string
   })
   sensitive = true
 }
