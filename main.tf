@@ -2,6 +2,24 @@ locals {
   # Have been playing with storage so leaving these here for now and can move to vars later
   datastore_id = "nvme-files"   # Directory storage on the nvme-storage pool for ISOs/templates
   storage_pool = "nvme-storage" # NVMe ZFS pool for VM/container disks and template 9000
+
+  # k3s VMs: the role and number come from the key (worker_03), the VM ID and IP from the role's ID range
+  k3s_vm_roles = { for key in keys(var.k3s_vms) : key => split("_", key)[0] }
+  k3s_vm_ids = {
+    for key, role in local.k3s_vm_roles :
+    key => var.k3s_roles[role].first_id + tonumber(split("_", key)[1]) - 1
+  }
+  k3s_vms = {
+    for key, vm in var.k3s_vms : key => {
+      role       = local.k3s_vm_roles[key]
+      name       = "k3s-${replace(key, "_", "-tf-")}" # worker_03 -> k3s-worker-tf-03
+      vm_id      = local.k3s_vm_ids[key]
+      ip_address = cidrhost("${var.network.gateway}${var.network.cidr_suffix}", local.k3s_vm_ids[key])
+      node_name  = vm.node_name
+      cores      = coalesce(vm.cores, var.k3s_roles[local.k3s_vm_roles[key]].cores)
+      memory     = coalesce(vm.memory, var.k3s_roles[local.k3s_vm_roles[key]].memory)
+    }
+  }
 }
 
 # PROXMOX NODES
@@ -82,10 +100,9 @@ module "vm_image_downloads" {
 module "k3s_cluster" {
   source = "./modules/k3s_cluster"
 
-  cluster_nodes = var.k3s_vms
+  cluster_nodes = local.k3s_vms
 
-  # Proxmox settings: default node for VMs without a node_name
-  proxmox_node = var.proxmox.node
+  # Proxmox settings
   storage_pool = proxmox_storage_zfspool.nvme_storage.id
 
   # Templates: one per node, each built from that node's copy of the cloud image
@@ -262,11 +279,8 @@ resource "local_file" "ansible_hosts_file" {
     lxc_root_password  = var.lxc_defaults.password
     lxc_ssh_public_key = var.lxc_defaults.ssh_public_key
 
-    # K3s VM IPs
-    k3s_control_01_ip = var.k3s_vms.control_01.ip_address
-    k3s_control_02_ip = var.k3s_vms.control_02.ip_address
-    k3s_worker_01_ip  = var.k3s_vms.worker_01.ip_address
-    k3s_worker_02_ip  = var.k3s_vms.worker_02.ip_address
+    # K3s VMs, grouped by role in the template
+    k3s_vms = local.k3s_vms
 
     # K3s Raspberry Pi IPs
     k3s_pi_01_ip = var.k3s_pi_01_ip

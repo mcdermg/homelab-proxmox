@@ -81,12 +81,18 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/
 
 # K3s Cluster VMs
 [k3s_control]
-k3s-control-01 ansible_host=${k3s_control_01_ip}
-k3s-control-02 ansible_host=${k3s_control_02_ip}
+%{ for vm in k3s_vms ~}
+%{ if vm.role == "control" ~}
+${vm.name} ansible_host=${vm.ip_address}
+%{ endif ~}
+%{ endfor ~}
 
 [k3s_workers]
-k3s-worker-01 ansible_host=${k3s_worker_01_ip}
-k3s-worker-02 ansible_host=${k3s_worker_02_ip}
+%{ for vm in k3s_vms ~}
+%{ if vm.role == "worker" ~}
+${vm.name} ansible_host=${vm.ip_address}
+%{ endif ~}
+%{ endfor ~}
 
 [k3s_control:vars]
 ansible_user=${vm_cloudinit_username}
