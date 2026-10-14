@@ -2,4 +2,4 @@ export ROOT_PASS="{{ lxc_root_password }}"
 export DB_PASS="{{ postgres_admin_password }}"
 export HUB_APIKEY=SKIP
 export SEC_ALERTS=SKIP
-export SEC_UPDATES=FORCE
+export SEC_UPDATES=SKIP  # TurnKey tees apt output to the console, which blocks on a headless container; update.yaml patches instead
