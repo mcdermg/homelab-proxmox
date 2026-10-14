@@ -10,9 +10,10 @@
     name: aptitude
     state: present
 
+# Proxmox nodes get a full upgrade (Proxmox docs: plain upgrade can leave a node partially upgraded); everything else stays on plain upgrade
 - name: Check for upgradeable packages
   ansible.builtin.apt:
-    upgrade: 'yes'
+    upgrade: "{{ 'dist' if 'proxmox' in group_names else 'yes' }}"
   check_mode: true
   register: upgradeable
   failed_when: false
@@ -24,7 +25,7 @@
 
 - name: Update and upgrade apt packages
   ansible.builtin.apt:
-    upgrade: 'yes'
+    upgrade: "{{ 'dist' if 'proxmox' in group_names else 'yes' }}"
     update_cache: true
     cache_valid_time: 86400 # One day
   register: upgrade_result
