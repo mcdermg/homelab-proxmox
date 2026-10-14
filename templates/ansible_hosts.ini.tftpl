@@ -10,6 +10,10 @@ pm_api_host=${proxmox_host}
 pm_api_token_id=${proxmox_api_token_id}
 pm_api_token_secret=${proxmox_api_token_secret}
 pm_node=${proxmox_node}
+# Postgres and Gitea first-boot passwords, used by the pct-based plays
+postgres_admin_password=${postgres_admin_password}
+gitea_db_password=${gitea_db_password}
+gitea_admin_password=${gitea_admin_password}
 
 # Shared variables available to all hosts
 [all:vars]
@@ -40,7 +44,6 @@ cloudflared ansible_host=${cloudflared_ip}
 
 [cloudflared_host:vars]
 ansible_user=root
-ansible_password=${lxc_root_password}
 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 
 # LXC Containers - Direct access for system updates
@@ -76,7 +79,6 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/
 
 [lxc_containers:vars]
 ansible_user=root
-ansible_password=${lxc_root_password}
 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 
 # K3s Cluster VMs
@@ -96,12 +98,10 @@ ${vm.name} ansible_host=${vm.ip_address}
 
 [k3s_control:vars]
 ansible_user=${vm_cloudinit_username}
-ansible_password=${vm_cloudinit_password}
 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 
 [k3s_workers:vars]
 ansible_user=${vm_cloudinit_username}
-ansible_password=${vm_cloudinit_password}
 ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 
 # K3s Raspberry Pis

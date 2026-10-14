@@ -202,13 +202,19 @@ variable "network" {
   }
 }
 
+# SSH ACCESS
+variable "ssh_public_key_file" {
+  description = "Public key authorized on every k3s VM (cloud-init user) and LXC container (root), read from the machine running tofu"
+  type        = string
+  default     = "~/.ssh/id_ed25519.pub"
+}
+
 # VM CLOUD-INIT CONFIGURATION
 variable "vm_cloudinit" {
   description = "Cloud-init configuration for VMs"
   type = object({
-    username       = string
-    password       = string
-    ssh_public_key = optional(string, "")
+    username = string
+    password = string
   })
   sensitive = true
 }
@@ -217,13 +223,13 @@ variable "vm_cloudinit" {
 variable "lxc_defaults" {
   description = "Default configuration for LXC containers"
   type = object({
-    password       = string
-    ssh_public_key = optional(string, "")
+    password = string
   })
   sensitive = true
 }
 
-# GITEA APPLICATION CREDENTIALS
+# APPLICATION CREDENTIALS
+# These end up unescaped in shell, sed and SQL in the init scripts, so stick to letters, digits, '.', '_' and '-'
 variable "gitea_db_password" {
   description = "Password for Gitea PostgreSQL database user"
   type        = string
@@ -232,6 +238,18 @@ variable "gitea_db_password" {
 
 variable "gitea_admin_password" {
   description = "Password for Gitea admin user"
+  type        = string
+  sensitive   = true
+}
+
+variable "postgres_admin_password" {
+  description = "Password for the postgres superuser, set by TurnKey's first boot"
+  type        = string
+  sensitive   = true
+}
+
+variable "pulse_admin_password" {
+  description = "Password for the Pulse web UI admin user"
   type        = string
   sensitive   = true
 }
@@ -384,7 +402,7 @@ variable "lxc_containers" {
       ip_address       = "192.168.1.113"
       started          = false
       features = {
-        nesting = false
+        nesting = true # systemd 252 in an unprivileged container needs it
       }
       tags = ["turnkey"]
     }

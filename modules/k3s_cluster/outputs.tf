@@ -142,9 +142,3 @@ output "vm_ipv4_addresses" {
     proxmox_virtual_environment_vm.k3s_nodes
   ]
 }
-
-# RAW VM RESOURCES
-output "vm_resources" {
-  description = "Raw VM resource objects for advanced use cases"
-  value       = proxmox_virtual_environment_vm.k3s_nodes
-}

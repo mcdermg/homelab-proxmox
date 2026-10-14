@@ -70,8 +70,8 @@
   when: gitea_needs_config
 
 - name: Create gitea init script in firstboot hooks
-  ansible.builtin.copy:
-    src: gitea-init.sh
+  ansible.builtin.template:
+    src: gitea-init.sh.j2
     dest: "/var/lib/lxc/{{ gitea_ctid }}/rootfs/usr/lib/inithooks/firstboot.d/99custom-gitea-init"
     mode: '0755'
     owner: 100000
