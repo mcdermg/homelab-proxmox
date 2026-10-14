@@ -1,0 +1,6 @@
+# Values for the argo-cd chart (helm_release.argocd)
+# The Gitea username and password are added from the gitea/ state with set_sensitive in main.tf, so they never land in a file
+configs:
+  credentialTemplates:
+    gitea:
+      url: http://192.168.1.117/homelab   # every repo in the homelab Gitea org

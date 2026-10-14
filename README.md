@@ -75,6 +75,32 @@ tf -chdir=gitea state rm gitea_user.owner gitea_user.argocd
 
 `gitea/terraform.tfvars` (gitignored) sets `gitea_url`, `gitea_admin` (the admin's username and the root `gitea_admin.password`), `gitea_user` and `gitea_argocd_user` (each a username, an email no other user has, and a password) and `gitea_org` (organisation name).
 
+## ArgoCD
+
+`argocd/` is a third OpenTofu root with its own state (`homelab/argocd/terraform.tfstate`). It uses the Helm provider with the `k3s` kubeconfig context that `ansible/k3s.yaml` writes, and installs:
+
+- `argo-cd` (argo-helm), with one credential template that logs in to every repo in the Gitea org as the read-only `argocd` user
+- `argocd-apps` (argo-helm), creating the root Application ("app of apps") that syncs `argocd/applications/` from the Gitea mirror of `homelab-argocd-config`
+
+Chart settings are plain values files in `argocd/values/` (`argo-cd.yaml`, `root-app.yaml`), with the Gitea URL written out as in `homelab-argocd-config`. The `argocd` username and password are read from the `gitea/` state and passed with `set_sensitive`, so that password only lives in `gitea/terraform.tfvars`. `argocd/terraform.tfvars` holds only `argocd_admin_password`, the UI `admin` password, which is stored bcrypt hashed. OpenTofu owns the ArgoCD install; ArgoCD owns everything it deploys.
+
+```bash
+tf -chdir=argocd init
+tf -chdir=argocd apply
+kubectl -n argocd port-forward svc/argocd-server 8080:443   # UI on https://localhost:8080, user admin
+```
+
+## Rebuild Runbook
+
+Each step needs the one before it finished:
+
+1. `tf apply` in the MikroTik repo
+2. `tf apply` here (containers, VMs, tunnel)
+3. `cd ansible && ansible-playbook playbook.yaml`
+4. `ansible-playbook k3s.yaml` (the cluster)
+5. `tf -chdir=gitea apply` (see Gitea Users and Mirrors for the `state rm` after a Gitea rebuild)
+6. `tf -chdir=argocd apply`; ArgoCD then deploys everything in `homelab-argocd-config`
+
 ## Networking
 
 ### Lab IP Layout
