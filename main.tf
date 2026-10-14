@@ -14,7 +14,7 @@ locals {
   k3s_vms = {
     for key, vm in var.k3s_vms : key => {
       role       = local.k3s_vm_roles[key]
-      name       = "k3s-${replace(key, "_", "-tf-")}" # worker_03 -> k3s-worker-tf-03
+      name       = "k3s-${replace(key, "_", "-")}" # worker_03 -> k3s-worker-03
       vm_id      = local.k3s_vm_ids[key]
       ip_address = cidrhost("${var.network.gateway}${var.network.cidr_suffix}", local.k3s_vm_ids[key])
       node_name  = vm.node_name
@@ -28,7 +28,7 @@ locals {
     { for node, cfg in var.proxmox_nodes : node => cfg.address },
     { for key, ct in var.lxc_containers : ct.name => ct.ip_address },
     { for key, vm in local.k3s_vms : vm.name => vm.ip_address },
-    { "k3s-pi-01" = var.k3s_pi_01_ip, "k3s-pi-02" = var.k3s_pi_02_ip },
+    { "pi-control" = var.k3s_pi_01_ip, "pi-worker" = var.k3s_pi_02_ip },
   )
 }
 

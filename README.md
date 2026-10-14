@@ -40,6 +40,20 @@ ansible-playbook update.yaml --limit proxmox    # Proxmox nodes only
 ansible-playbook update.yaml --limit k3s_pis    # Raspberry Pis only
 ```
 
+**k3s Cluster:** `ansible/k3s.yaml`
+- Imports the site playbook from the official [k3s-ansible](https://github.com/k3s-io/k3s-ansible) collection, pinned in `ansible/requirements.yaml`, then labels the agents as workers
+- Nodes come from the `server` and `agent` groups in the generated `hosts.ini`: the control VMs plus the Pi 4 (`pi-control`) are servers (embedded etcd, the first one initialises it), the worker VMs plus the Pi 3 (`pi-worker`) are agents
+- Each node registers under its inventory name (`node-name`), so `kubectl` shows the same names as Ansible and DNS whatever the OS hostname is
+- Settings (k3s version, servicelb disabled, control-plane taint, kubeconfig context `k3s`) are in `ansible/group_vars/k3s_cluster.yaml`
+- Needs `python-netaddr` and `kubectl` on the machine running Ansible
+
+```bash
+ansible-galaxy collection install -r requirements.yaml    # Once, and after changing the pin
+ansible-playbook k3s.yaml                                 # Install; merges the kubeconfig into ~/.kube/config
+ansible-playbook k3s.yaml -e k3s_server_serial=1          # Upgrade after bumping k3s_version, one server at a time
+ansible-playbook k3s.orchestration.reset                  # Uninstall k3s from every node
+```
+
 ## Networking
 
 ### Lab IP Layout

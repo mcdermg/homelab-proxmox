@@ -1,0 +1,7 @@
+---
+# Install with: ansible-galaxy collection install -r requirements.yaml
+collections:
+  # main, not the 1.2.2 tag: 1.2.2 predates k3s_server_serial (one-server-at-a-time upgrades)
+  - name: https://github.com/k3s-io/k3s-ansible.git
+    type: git
+    version: 5f06791694c0d9dc63f1271dba21bf3497446d93

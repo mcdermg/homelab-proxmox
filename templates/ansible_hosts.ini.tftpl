@@ -119,8 +119,8 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/
 
 # K3s Raspberry Pis
 [k3s_pis]
-k3s-pi-01 ansible_host=${k3s_pi_01_ip}
-k3s-pi-02 ansible_host=${k3s_pi_02_ip}
+pi-control ansible_host=${k3s_pi_01_ip}
+pi-worker ansible_host=${k3s_pi_02_ip}
 
 [k3s_pis:vars]
 ansible_user=pi
@@ -131,6 +131,23 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/
 k3s_control
 k3s_workers
 k3s_pis
+
+# k3s-ansible groups (k3s.yaml): the first server initialises etcd and is the API endpoint
+[server]
+%{ for vm in k3s_vms ~}
+%{ if vm.role == "control" ~}
+${vm.name}
+%{ endif ~}
+%{ endfor ~}
+pi-control
+
+[agent]
+%{ for vm in k3s_vms ~}
+%{ if vm.role == "worker" ~}
+${vm.name}
+%{ endif ~}
+%{ endfor ~}
+pi-worker
 
 # Convenience groups for updating all Debian-based infrastructure
 [debian_hosts:children]

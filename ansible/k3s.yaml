@@ -1,0 +1,22 @@
+---
+# k3s cluster install and upgrade via the k3s-io/k3s-ansible collection (requirements.yaml)
+# Settings are in group_vars/k3s_cluster.yaml, hosts in the server and agent groups of hosts.ini
+# Install: ansible-playbook k3s.yaml
+# Upgrade: bump k3s_version, then ansible-playbook k3s.yaml -e k3s_server_serial=1
+# Tear down: ansible-playbook k3s.orchestration.reset
+
+- name: Install k3s
+  ansible.builtin.import_playbook: k3s.orchestration.site
+
+# A node can't give itself a node-role.kubernetes.io label, so it's set from the first server
+- name: Label the agents as workers
+  hosts: agent
+  gather_facts: false
+  tasks:
+    - name: Add the worker role label
+      ansible.builtin.command:
+        cmd: k3s kubectl label node {{ inventory_hostname }} node-role.kubernetes.io/worker=worker --overwrite
+      delegate_to: "{{ groups['server'][0] }}"
+      become: true
+      register: k3s_worker_label
+      changed_when: "'not labeled' not in k3s_worker_label.stdout"
