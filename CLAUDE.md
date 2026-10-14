@@ -28,11 +28,11 @@ K3s embedded etcd requires an odd number of control nodes (3, 5, 7) for quorum. 
 ### Node Distribution
 
 **OpenTofu-Managed (Proxmox VMs):**
-- `k3s-control-tf-01` (192.168.1.210) - Control plane, VM ID 210, pve01
-- `k3s-control-tf-02` (192.168.1.211) - Control plane, VM ID 211, pve02
-- `k3s-worker-tf-01` (192.168.1.215) - Worker, VM ID 215, pve01
-- `k3s-worker-tf-02` (192.168.1.216) - Worker, VM ID 216, pve01
-- `k3s-worker-tf-03` to `-05` (192.168.1.217–219) - Workers, VM IDs 217–219, pve02
+- `k3s-control-01` (192.168.1.210) - Control plane, VM ID 210, pve01
+- `k3s-control-02` (192.168.1.211) - Control plane, VM ID 211, pve02
+- `k3s-worker-01` (192.168.1.215) - Worker, VM ID 215, pve01
+- `k3s-worker-02` (192.168.1.216) - Worker, VM ID 216, pve01
+- `k3s-worker-03` to `-06` (192.168.1.217–220) - Workers, VM IDs 217–220, pve02
 
 Placement is `node_name` per entry (validated against `proxmox_nodes`): required in `k3s_vms`, optional in `lxc_containers` where it falls back to `proxmox.node`. The two Proxmox control planes sit on different nodes so one node failure doesn't take etcd quorum with it.
 
@@ -43,7 +43,7 @@ Placement is `node_name` per entry (validated against `proxmox_nodes`): required
 ### IP Addressing Scheme
 
 **Convention:** Last octet matches VM ID
-Control plane VMs use VM IDs/IPs 210–214 and workers use 215–220, set as ranges in `var.k3s_roles`. A `k3s_vms` entry is keyed `<role>_<NN>` and only sets `node_name` (plus optional `cores`/`memory`); the VM ID, IP and name are derived in `local.k3s_vms` in `main.tf`, so `worker_03` becomes VM 217, `192.168.1.217`, `k3s-worker-tf-03`.
+Control plane VMs use VM IDs/IPs 210–214 and workers use 215–220, set as ranges in `var.k3s_roles`. A `k3s_vms` entry is keyed `<role>_<NN>` and only sets `node_name` (plus optional `cores`/`memory`); the VM ID, IP and name are derived in `local.k3s_vms` in `main.tf`, so `worker_03` becomes VM 217, `192.168.1.217`, `k3s-worker-03`.
 
 ## Network Architecture
 
@@ -83,12 +83,12 @@ ISP Router (192.168.0.1)
             └── Lab Network (192.168.1.0/24)
                     │
                     ├── Proxmox pve01 (192.168.1.250)
-                    │   ├── k3s-control-tf-01 (192.168.1.210) - Control VM
-                    │   ├── k3s-worker-tf-01 (192.168.1.215) - Worker VM
-                    │   └── k3s-worker-tf-02 (192.168.1.216) - Worker VM
+                    │   ├── k3s-control-01 (192.168.1.210) - Control VM
+                    │   ├── k3s-worker-01 (192.168.1.215) - Worker VM
+                    │   └── k3s-worker-02 (192.168.1.216) - Worker VM
                     ├── Proxmox pve02 (192.168.1.251)
-                    │   ├── k3s-control-tf-02 (192.168.1.211) - Control VM
-                    │   └── k3s-worker-tf-03 to -05 (192.168.1.217–219) - Worker VMs
+                    │   ├── k3s-control-02 (192.168.1.211) - Control VM
+                    │   └── k3s-worker-03 to -06 (192.168.1.217–220) - Worker VMs
                     ├── Pi 4 (192.168.1.241)
                     ├── Pi 3 (192.168.1.242)
                     ├── Container (192.168.1.249) - ISP Monitor
@@ -160,7 +160,7 @@ homelab-proxmox/
 
 - Resource names: snake_case (e.g., `k3s_nodes`, `control_plane`)
 - Variable names: snake_case with descriptive names (e.g., `template_storage_pool`, `network_bridge`)
-- VM names: kebab-case (e.g., `k3s-control-tf-01`, `k3s-worker-tf-01`)
+- VM names: kebab-case (e.g., `k3s-control-01`, `k3s-worker-01`)
 - Tags: lowercase, descriptive (e.g., `["terraform", "k3s", "control"]`)
 - Comments: Concise, describe purpose not implementation
 
