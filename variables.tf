@@ -405,23 +405,25 @@ variable "lxc_containers" {
       }
       tags = ["turnkey"]
     }
-    caddy = {
-      vm_id            = 114
-      name             = "caddy"
-      template_file_id = "alpine-3.22-default_20250617_amd64.tar.xz"
-      os_type          = "alpine"
-      cores            = 1
-      memory           = 512
-      disk_size        = 8
-      swap             = 256
-      node_name        = "pve02"
-      ip_address       = "192.168.1.114"
-      started          = false
-      features = {
-        nesting = false
-      }
-      tags = ["alpine"]
-    }
+    # Can't remember what Caddy was in the lab for in the first place; it was never configured (LAB-54).
+    # Git history (c3bc103) suggests an internal reverse proxy for *.lab names. Commented out until there's a use for it.
+    #caddy = {
+    #  vm_id            = 114
+    #  name             = "caddy"
+    #  template_file_id = "alpine-3.22-default_20250617_amd64.tar.xz"
+    #  os_type          = "alpine"
+    #  cores            = 1
+    #  memory           = 512
+    #  disk_size        = 8
+    #  swap             = 256
+    #  node_name        = "pve02"
+    #  ip_address       = "192.168.1.114"
+    #  started          = false
+    #  features = {
+    #    nesting = false
+    #  }
+    #  tags = ["alpine"]
+    #}
     bind9 = {
       vm_id            = 115
       name             = "bind9"

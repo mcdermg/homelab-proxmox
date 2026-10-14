@@ -4,4 +4,4 @@ export APP_EMAIL="gary@homelab.local"
 export APP_DOMAIN="192.168.1.117"
 export HUB_APIKEY=SKIP
 export SEC_ALERTS=SKIP
-export SEC_UPDATES=FORCE
+export SEC_UPDATES=SKIP  # TurnKey tees apt output to the console, which blocks on a headless container; update.yaml patches instead
