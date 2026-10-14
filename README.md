@@ -56,7 +56,7 @@ ansible-playbook k3s.orchestration.reset                  # Uninstall k3s from e
 
 ## Gitea Users and Mirrors
 
-`gitea/` is a separate OpenTofu root with its own state (`homelab/gitea/terraform.tfstate` in the same R2 bucket). The Gitea provider needs Gitea running, which only happens after the root apply and the Ansible playbook, so it can't live in the root config. It creates a user, an organisation (the admin and the user are both owners) and the pull mirrors in `gitea_mirrors` inside that organisation (by default `homelab-argocd-config`, which ArgoCD pulls from).
+`gitea/` is a separate OpenTofu root with its own state (`homelab/gitea/terraform.tfstate` in the same R2 bucket). The Gitea provider needs Gitea running, which only happens after the root apply and the Ansible playbook, so it can't live in the root config. It creates a user, an organisation (the admin and the user are both owners), the private pull mirrors in `gitea_mirrors` inside that organisation (by default `homelab-argocd-config`) and a read-only user ArgoCD pulls them with.
 
 Run order on a rebuild:
 
@@ -67,13 +67,13 @@ tf -chdir=gitea init
 tf -chdir=gitea apply                     # needs gitea/terraform.tfvars
 ```
 
-After Gitea (and its Postgres) is rebuilt, the `gitea/` state still points at the old objects. The org, mirror and team membership notice they're gone and are recreated, but the provider errors on the missing user (`user not found with id N`), so drop it from state first:
+After Gitea (and its Postgres) is rebuilt, the `gitea/` state still points at the old objects. The org, mirror and team membership notice they're gone and are recreated, but the provider errors on missing users (`user not found with id N`), so drop them from state first:
 
 ```bash
-tf -chdir=gitea state rm gitea_user.owner
+tf -chdir=gitea state rm gitea_user.owner gitea_user.argocd
 ```
 
-`gitea/terraform.tfvars` (gitignored) sets `gitea_url`, `gitea_admin` (the admin's username and the root `gitea_admin.password`), `gitea_user` (username, an email the admin isn't using, password) and `gitea_org` (organisation name).
+`gitea/terraform.tfvars` (gitignored) sets `gitea_url`, `gitea_admin` (the admin's username and the root `gitea_admin.password`), `gitea_user` and `gitea_argocd_user` (each a username, an email no other user has, and a password) and `gitea_org` (organisation name).
 
 ## Networking
 

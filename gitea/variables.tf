@@ -24,6 +24,16 @@ variable "gitea_user" {
   sensitive = true
 }
 
+variable "gitea_argocd_user" {
+  description = "Read-only Gitea user ArgoCD pulls the mirrors with. Its email must also be unique"
+  type = object({
+    username = string
+    email    = string
+    password = string
+  })
+  sensitive = true
+}
+
 # ORGANISATION
 variable "gitea_org" {
   description = "Organisation that holds the mirrors. gitea_user and the admin are both owners, so either can see and manage them"
@@ -32,10 +42,10 @@ variable "gitea_org" {
 
 # MIRRORS
 variable "gitea_mirrors" {
-  description = "Pull mirrors in gitea_org, keyed by repository name. interval uses Gitea's units (h, m, s), 0 disables syncing"
+  description = "Private pull mirrors in gitea_org, readable by gitea_argocd_user, keyed by repository name. interval in the form Gitea returns it (e.g. 15m0s, 8h0m0s, or it shows a diff every plan), 0 disables syncing"
   type = map(object({
     source   = string
-    interval = optional(string, "15m")
+    interval = optional(string, "15m0s")
   }))
   default = {
     homelab-argocd-config = {

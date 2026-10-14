@@ -23,7 +23,9 @@ No modules.
 | ---- | ---- |
 | [gitea_org.this](https://registry.terraform.io/providers/go-gitea/gitea/latest/docs/resources/org) | resource |
 | [gitea_repository.mirror](https://registry.terraform.io/providers/go-gitea/gitea/latest/docs/resources/repository) | resource |
+| [gitea_repository_collaborator.argocd](https://registry.terraform.io/providers/go-gitea/gitea/latest/docs/resources/repository_collaborator) | resource |
 | [gitea_team_membership.owner](https://registry.terraform.io/providers/go-gitea/gitea/latest/docs/resources/team_membership) | resource |
+| [gitea_user.argocd](https://registry.terraform.io/providers/go-gitea/gitea/latest/docs/resources/user) | resource |
 | [gitea_user.owner](https://registry.terraform.io/providers/go-gitea/gitea/latest/docs/resources/user) | resource |
 | [gitea_teams.org](https://registry.terraform.io/providers/go-gitea/gitea/latest/docs/data-sources/teams) | data source |
 
@@ -32,7 +34,8 @@ No modules.
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_gitea_admin"></a> [gitea\_admin](#input\_gitea\_admin) | Gitea admin login the provider uses (the user the Ansible gitea role creates) | <pre>object({<br/>    username = string<br/>    password = string<br/>  })</pre> | n/a | yes |
-| <a name="input_gitea_mirrors"></a> [gitea\_mirrors](#input\_gitea\_mirrors) | Pull mirrors in gitea\_org, keyed by repository name. interval uses Gitea's units (h, m, s), 0 disables syncing | <pre>map(object({<br/>    source   = string<br/>    interval = optional(string, "15m")<br/>  }))</pre> | <pre>{<br/>  "homelab-argocd-config": {<br/>    "source": "https://github.com/mcdermg/homelab-argocd-config.git"<br/>  }<br/>}</pre> | no |
+| <a name="input_gitea_argocd_user"></a> [gitea\_argocd\_user](#input\_gitea\_argocd\_user) | Read-only Gitea user ArgoCD pulls the mirrors with. Its email must also be unique | <pre>object({<br/>    username = string<br/>    email    = string<br/>    password = string<br/>  })</pre> | n/a | yes |
+| <a name="input_gitea_mirrors"></a> [gitea\_mirrors](#input\_gitea\_mirrors) | Private pull mirrors in gitea\_org, readable by gitea\_argocd\_user, keyed by repository name. interval in the form Gitea returns it (e.g. 15m0s, 8h0m0s, or it shows a diff every plan), 0 disables syncing | <pre>map(object({<br/>    source   = string<br/>    interval = optional(string, "15m0s")<br/>  }))</pre> | <pre>{<br/>  "homelab-argocd-config": {<br/>    "source": "https://github.com/mcdermg/homelab-argocd-config.git"<br/>  }<br/>}</pre> | no |
 | <a name="input_gitea_org"></a> [gitea\_org](#input\_gitea\_org) | Organisation that holds the mirrors. gitea\_user and the admin are both owners, so either can see and manage them | `string` | n/a | yes |
 | <a name="input_gitea_url"></a> [gitea\_url](#input\_gitea\_url) | Gitea base URL (the gitea container from the root config) | `string` | n/a | yes |
 | <a name="input_gitea_user"></a> [gitea\_user](#input\_gitea\_user) | Gitea user added to gitea\_org's Owners team. Gitea needs a unique email per user, so it can't reuse the admin's | <pre>object({<br/>    username = string<br/>    email    = string<br/>    password = string<br/>  })</pre> | n/a | yes |
