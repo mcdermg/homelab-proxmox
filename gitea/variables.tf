@@ -45,7 +45,7 @@ variable "gitea_mirrors" {
   description = "Private pull mirrors in gitea_org, readable by gitea_argocd_user, keyed by repository name. interval in the form Gitea returns it (e.g. 15m0s, 8h0m0s, or it shows a diff every plan), 0 disables syncing"
   type = map(object({
     source   = string
-    interval = optional(string, "15m0s")
+    interval = optional(string, "10m0s")
   }))
   default = {
     homelab-argocd-config = {
