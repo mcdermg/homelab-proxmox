@@ -143,3 +143,62 @@
   become: true
   changed_when: false
   when: bind9_needs_config
+
+# The zones above are only written on first configuration, so later record changes are pushed here.
+# Each zone is compared with a fixed serial against the copy last pushed, so a run only pushes and
+# reloads when a record changed. That copy is updated last, so a failed run is retried next time.
+- name: Update the zones on a configured bind9 container
+  when: not bind9_needs_config
+  become: true
+  vars:
+    bind9_zone_dir: "/root/bind9-{{ bind9_ctid }}-zones"
+    bind9_zones:
+      - db.homelab.local
+      - db.1.168.192.in-addr.arpa
+    bind9_changed_zones: "{{ bind9_zone_compare.results | selectattr('changed') | map(attribute='item') | list }}"
+  block:
+    - name: Create the zone staging directory on the node
+      ansible.builtin.file:
+        path: "{{ bind9_zone_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Compare the zones with the copy last pushed
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "{{ bind9_zone_dir }}/{{ item }}.pushed"
+        mode: '0600'
+      vars:
+        bind9_zone_serial: 0
+      check_mode: true
+      loop: "{{ bind9_zones }}"
+      register: bind9_zone_compare
+
+    - name: Render the changed zones with a new serial
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "{{ bind9_zone_dir }}/{{ item }}"
+        mode: '0644'
+      loop: "{{ bind9_changed_zones }}"
+
+    - name: Push the changed zones into the container, check them and swap them in
+      ansible.builtin.shell: >-
+        pct push {{ bind9_ctid }} {{ bind9_zone_dir }}/{{ item }} /etc/bind/zones/{{ item }}.new --perms 0644 &&
+        pct exec {{ bind9_ctid }} -- sh -c
+        'named-checkzone {{ item | regex_replace('^db[.]', '') }} /etc/bind/zones/{{ item }}.new &&
+        mv /etc/bind/zones/{{ item }}.new /etc/bind/zones/{{ item }}'
+      loop: "{{ bind9_changed_zones }}"
+
+    - name: Reload bind9
+      ansible.builtin.command:
+        cmd: "pct exec {{ bind9_ctid }} -- rndc reload"
+      when: bind9_changed_zones | length > 0
+
+    - name: Record the pushed zones
+      ansible.builtin.template:
+        src: "{{ item }}.j2"
+        dest: "{{ bind9_zone_dir }}/{{ item }}.pushed"
+        mode: '0600'
+      vars:
+        bind9_zone_serial: 0
+      loop: "{{ bind9_changed_zones }}"
