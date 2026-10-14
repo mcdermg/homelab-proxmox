@@ -56,13 +56,10 @@
   when: gitea_needs_config
 
 - name: Stop gitea container if needs configuration
-  community.proxmox.proxmox:
-    api_host: "{{ pm_api_host }}"
-    api_token_id: "{{ pm_api_token_id }}"
-    api_token_secret: "{{ pm_api_token_secret }}"
-    node: "{{ pm_node }}"
-    vmid: "{{ gitea_ctid }}"
-    state: stopped
+  ansible.builtin.shell: "if pct status {{ gitea_ctid }} | grep -q running; then pct stop {{ gitea_ctid }} && echo stopped; fi"
+  register: gitea_stop
+  changed_when: "'stopped' in gitea_stop.stdout"
+  become: true
   when: gitea_needs_config
 
 - name: Mount gitea container for file operations

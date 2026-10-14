@@ -1,10 +1,5 @@
 ---
 # roles/postgres/handlers/main.yaml
 - name: Start postgres container
-  community.proxmox.proxmox:
-    api_host: "{{ pm_api_host }}"
-    api_token_id: "{{ pm_api_token_id }}"
-    api_token_secret: "{{ pm_api_token_secret }}"
-    node: "{{ pm_node }}"
-    vmid: "{{ postgres_ctid }}"
-    state: started
+  ansible.builtin.shell: "pct status {{ postgres_ctid }} | grep -q running || pct start {{ postgres_ctid }}"
+  become: true

@@ -248,13 +248,11 @@ resource "local_file" "ansible_hosts_file" {
   count = contains(keys(var.lxc_containers), "postgres") && contains(keys(var.lxc_containers), "gitea") ? 1 : 0
 
   content = templatefile("${path.module}/templates/ansible_hosts.ini.tftpl", {
-    # Proxmox connection details: every node for SSH, pve01's endpoint for the API
-    proxmox_nodes            = var.proxmox_nodes
-    proxmox_host             = replace(replace(var.proxmox.endpoint, "https://", ""), ":8006", "")
-    proxmox_ssh_user         = var.proxmox.ssh_user
-    proxmox_ssh_port         = var.proxmox.ssh_port
-    proxmox_api_token_id     = split("=", var.proxmox_auth.api_token)[0]
-    proxmox_api_token_secret = split("=", var.proxmox_auth.api_token)[1]
+    # Proxmox connection details: every node for SSH, pve01's API endpoint for Pulse
+    proxmox_nodes    = var.proxmox_nodes
+    proxmox_host     = replace(replace(var.proxmox.endpoint, "https://", ""), ":8006", "")
+    proxmox_ssh_user = var.proxmox.ssh_user
+    proxmox_ssh_port = var.proxmox.ssh_port
 
     # Container details for pct operations
     lxc_nodes        = { for key, ct in var.lxc_containers : key => coalesce(ct.node_name, var.proxmox.node) }

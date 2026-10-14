@@ -172,7 +172,7 @@ homelab-proxmox/
 - Token format: `username@realm!tokenid=uuid`
 - Create token: `pveum user token add terraform-prov@pve terraform-token --privsep=0`
 - Set in terraform.tfvars: `proxmox_auth.api_token = "terraform-prov@pve!terraform-token=xxx"`
-- The Ansible inventory gets the token split into `pm_api_token_id` / `pm_api_token_secret` for the `community.proxmox` calls
+- Ansible doesn't use the API token: each container play runs on the node that holds the container and starts/stops it with `pct`
 - Some operations only work as `root@pam` (VM `arch`, feature flags on privileged containers); see the bpg provider docs
 
 **SSH:** the provider's SSH port is only set per node, via `ssh { node {} }` built from `var.proxmox_nodes`. Both nodes use `var.proxmox.ssh_port` (default 2222).

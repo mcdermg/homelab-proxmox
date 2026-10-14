@@ -198,6 +198,15 @@
           - "================================"
 
 # Plain Debian 13 containers: OpenTofu creates and starts them with the root SSH key, so these plays connect directly
+# raw needs no temp dir, so creating it here stops the first module run on a fresh container warning that it had to
+- name: Prepare the SSH-managed containers
+  hosts: ssh_containers
+  gather_facts: false
+  tasks:
+    - name: Create Ansible's remote temp directory
+      ansible.builtin.raw: mkdir -p -m 0700 ~/.ansible/tmp
+      changed_when: false
+
 - name: Install LibreSpeed
   hosts: librespeed_host
   gather_facts: false

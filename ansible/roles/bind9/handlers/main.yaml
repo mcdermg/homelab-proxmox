@@ -1,10 +1,5 @@
 ---
 # roles/bind9/handlers/main.yaml
 - name: Start bind9 container
-  community.proxmox.proxmox:
-    api_host: "{{ pm_api_host }}"
-    api_token_id: "{{ pm_api_token_id }}"
-    api_token_secret: "{{ pm_api_token_secret }}"
-    node: "{{ pm_node }}"
-    vmid: "{{ bind9_ctid }}"
-    state: started
+  ansible.builtin.shell: "pct status {{ bind9_ctid }} | grep -q running || pct start {{ bind9_ctid }}"
+  become: true

@@ -1,4 +1,7 @@
 #!/bin/bash
+# Log to a file, not the console: nothing reads a headless container's console, so once its buffer fills
+# any write blocks (seen with etckeeper's git commit after apt)
+exec >>/var/log/99custom-gitea-init.log 2>&1
 # Wait for PostgreSQL
 until timeout 1 bash -c "</dev/tcp/{{ postgres_ip }}/5432" 2>/dev/null; do
   echo "Waiting for PostgreSQL..."
