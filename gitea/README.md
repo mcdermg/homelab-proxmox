@@ -44,5 +44,6 @@ No modules.
 
 | Name | Description |
 | ---- | ----------- |
+| <a name="output_argocd_repo_credentials"></a> [argocd\_repo\_credentials](#output\_argocd\_repo\_credentials) | Read-only login ArgoCD uses for the repos in gitea\_org (read by argocd/) |
 | <a name="output_mirror_clone_urls"></a> [mirror\_clone\_urls](#output\_mirror\_clone\_urls) | HTTP clone URL of each mirror, for ArgoCD |
 <!-- END_TF_DOCS -->
