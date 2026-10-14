@@ -19,11 +19,17 @@ if grep -q "DB_TYPE.*=.*mysql" /home/git/custom/conf/app.ini; then
   systemctl start gitea
   sleep 5
 fi
-# Only create user if doesn't exist
+# TurnKey's 40gitea inithook sets its admin (named gitea) in the image's bundled MySQL, which the switch to
+# PostgreSQL above leaves behind, so the admin is created again in PostgreSQL
 if ! su - git -c "cd /home/git && ./gitea admin user list 2>/dev/null" | grep -qw "gitea"; then
   su - git -c "cd /home/git && ./gitea admin user create \
     --username gitea \
     --password {{ gitea_admin_password }} \
-    --email gary@homelab.local \
+    --email {{ gitea_admin_email }} \
     --admin"
 fi
+# TurnKey also writes ROOT_URL as https+unix://<domain>:3000/, which isn't a URL anyone visits, and the image
+# requires email confirmation, which needs mail delivery the lab doesn't have
+sed -i 's|^ROOT_URL.*|ROOT_URL = http://{{ gitea_ip }}/|' /etc/gitea/app.ini
+sed -i '/^\[service\]/,/^\[/ s/^REGISTER_EMAIL_CONFIRM.*/REGISTER_EMAIL_CONFIRM = false/' /etc/gitea/app.ini
+systemctl restart gitea

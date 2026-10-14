@@ -281,7 +281,8 @@ resource "local_file" "ansible_hosts_file" {
     # Postgres and Gitea first boot
     postgres_admin_password = var.postgres_admin_password
     gitea_db_password       = var.gitea_db_password
-    gitea_admin_password    = var.gitea_admin_password
+    gitea_admin_password    = var.gitea_admin.password
+    gitea_admin_email       = var.gitea_admin.email
 
     # Cloudflare Tunnel
     cloudflare_tunnel_id    = cloudflare_zero_trust_tunnel_cloudflared.homelab.id
