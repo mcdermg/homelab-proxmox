@@ -14,6 +14,7 @@
 - name: Wait for postgres container to complete firstboot and all reboots
   ansible.builtin.shell:
     cmd: "pct exec {{ postgres_ctid }} -- stat -c %s /etc/inithooks.conf"
+  delegate_to: "{{ groups['postgres_node'][0] }}"
   register: inithooks_size
   until: inithooks_size.stdout | int <= 1
   retries: 120  # 20 minutes for updates + reboots
@@ -25,6 +26,7 @@
 - name: Verify container has stable uptime (not mid-reboot)
   ansible.builtin.command:
     cmd: "pct exec {{ postgres_ctid }} -- awk '{print int($1)}' /proc/uptime"
+  delegate_to: "{{ groups['postgres_node'][0] }}"
   register: container_uptime
   until: container_uptime.stdout | int > 60
   retries: 30
@@ -44,6 +46,7 @@
 - name: Verify gitea database exists and is accessible
   ansible.builtin.shell:
     cmd: "pct exec {{ postgres_ctid }} -- su - postgres -c \"psql -d gitea -c 'SELECT 1'\""
+  delegate_to: "{{ groups['postgres_node'][0] }}"
   register: db_test
   until: db_test.rc == 0
   retries: 10

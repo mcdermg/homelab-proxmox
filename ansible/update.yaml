@@ -2,7 +2,7 @@
 # Update playbook for all Debian-based infrastructure
 # Run with: ansible-playbook update.yaml
 # Or use --limit to target specific infrastructure:
-#   --limit proxmox          - Update only Proxmox host
+#   --limit proxmox          - Update only the Proxmox nodes
 #   --limit lxc_containers   - Update only LXC containers
 #   --limit k3s_cluster      - Update only K3s cluster (VMs + Pis)
 #   --limit k3s_pis          - Update only Raspberry Pis

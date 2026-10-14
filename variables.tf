@@ -333,7 +333,6 @@ variable "lxc_containers" {
     disk_size = optional(number, 8)
 
     # Placement and network
-    # shortcut: the pct-based Ansible plays (postgres, gitea, bind9, cloudflared) only reach var.proxmox.node; bind9 and cloudflared are on pve02, so don't run their plays until the inventory is per-node (LAB-65)
     node_name  = optional(string) # defaults to var.proxmox.node
     ip_address = string           # Main IP address for the container
 
