@@ -119,6 +119,5 @@ No modules.
 | <a name="output_vm_mac_addresses"></a> [vm\_mac\_addresses](#output\_vm\_mac\_addresses) | MAC addresses of VM network interfaces |
 | <a name="output_vm_names"></a> [vm\_names](#output\_vm\_names) | List of all VM names |
 | <a name="output_vm_network_details"></a> [vm\_network\_details](#output\_vm\_network\_details) | Complete network configuration for all VMs |
-| <a name="output_vm_resources"></a> [vm\_resources](#output\_vm\_resources) | Raw VM resource objects for advanced use cases |
 | <a name="output_worker_node_ips"></a> [worker\_node\_ips](#output\_worker\_node\_ips) | IP addresses of worker nodes |
 <!-- END_TF_DOCS -->

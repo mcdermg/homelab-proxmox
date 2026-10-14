@@ -70,8 +70,8 @@
   when: postgres_needs_config
 
 - name: Create postgres init script in firstboot hooks
-  ansible.builtin.copy:
-    src: postgres-init.sh
+  ansible.builtin.template:
+    src: postgres-init.sh.j2
     dest: "/var/lib/lxc/{{ postgres_ctid }}/rootfs/usr/lib/inithooks/firstboot.d/99custom-postgres-init"
     mode: '0755'
     owner: 100000

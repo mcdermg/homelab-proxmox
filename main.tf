@@ -3,6 +3,8 @@ locals {
   datastore_id = "nvme-files"   # Directory storage on the nvme-storage pool for ISOs/templates
   storage_pool = "nvme-storage" # NVMe ZFS pool for VM/container disks and template 9000
 
+  ssh_public_key = trimspace(file(pathexpand(var.ssh_public_key_file)))
+
   # k3s VMs: the role and number come from the key (worker_03), the VM ID and IP from the role's ID range
   k3s_vm_roles = { for key in keys(var.k3s_vms) : key => split("_", key)[0] }
   k3s_vm_ids = {
@@ -131,7 +133,7 @@ module "k3s_cluster" {
   # Cloud-init configuration
   cloudinit_username = var.vm_cloudinit.username
   cloudinit_password = var.vm_cloudinit.password
-  cloudinit_ssh_key  = var.vm_cloudinit.ssh_public_key
+  cloudinit_ssh_key  = local.ssh_public_key
 
   depends_on = [
     module.vm_image_downloads, # doesn't really but just for not doing everything at once
@@ -147,7 +149,7 @@ module "lxc_containers" {
   network_bridge  = var.network_bridge
   network_gateway = var.network.gateway
 
-  default_ssh_keys = var.lxc_defaults.ssh_public_key != "" ? [var.lxc_defaults.ssh_public_key] : []
+  default_ssh_keys = [local.ssh_public_key]
   default_password = var.lxc_defaults.password
 
   containers = {
@@ -185,7 +187,7 @@ module "lxc_containers" {
   }
   depends_on = [
     module.lxc_template_downloads,
-    module.k3s_cluster,
+    #module.k3s_cluster,
   ]
 }
 
@@ -228,12 +230,7 @@ resource "proxmox_acl" "pulse_token" {
   propagate = true
 }
 
-# Pulse admin login and API token, used by Ansible for the first-time setup
-resource "random_password" "pulse_admin" {
-  length  = 32
-  special = false
-}
-
+# Pulse API token, only used by Ansible for the first-time setup
 resource "random_password" "pulse_api_token" {
   length  = 48
   special = false
@@ -266,10 +263,15 @@ resource "local_file" "ansible_hosts_file" {
     pulse_ip      = var.lxc_containers.pulse.ip_address
 
     # Pulse first-time setup
-    pulse_admin_password   = random_password.pulse_admin.result
+    pulse_admin_password   = var.pulse_admin_password
     pulse_api_token        = random_password.pulse_api_token.result
     pulse_pve_token_id     = proxmox_user_token.pulse_monitor.id
     pulse_pve_token_secret = split("=", proxmox_user_token.pulse_monitor.value)[1]
+
+    # Postgres and Gitea first boot
+    postgres_admin_password = var.postgres_admin_password
+    gitea_db_password       = var.gitea_db_password
+    gitea_admin_password    = var.gitea_admin_password
 
     # Cloudflare Tunnel
     cloudflare_tunnel_id    = cloudflare_zero_trust_tunnel_cloudflared.homelab.id
@@ -277,7 +279,7 @@ resource "local_file" "ansible_hosts_file" {
 
     # LXC defaults
     lxc_root_password  = var.lxc_defaults.password
-    lxc_ssh_public_key = var.lxc_defaults.ssh_public_key
+    lxc_ssh_public_key = local.ssh_public_key
 
     # K3s VMs, grouped by role in the template
     k3s_vms = local.k3s_vms
@@ -286,9 +288,8 @@ resource "local_file" "ansible_hosts_file" {
     k3s_pi_01_ip = var.k3s_pi_01_ip
     k3s_pi_02_ip = var.k3s_pi_02_ip
 
-    # VM cloud-init credentials
+    # VM cloud-init user, Ansible logs in as it with the SSH key
     vm_cloudinit_username = var.vm_cloudinit.username
-    vm_cloudinit_password = var.vm_cloudinit.password
   })
   filename = "${path.module}/ansible/hosts.ini"
   depends_on = [
@@ -296,26 +297,4 @@ resource "local_file" "ansible_hosts_file" {
     cloudflare_zero_trust_tunnel_cloudflared.homelab,
     data.cloudflare_zero_trust_tunnel_cloudflared_token.homelab,
   ]
-}
-
-resource "local_file" "postgres_init_script" {
-  count = contains(keys(var.lxc_containers), "postgres") && contains(keys(var.lxc_containers), "gitea") ? 1 : 0
-
-  content = templatefile("${path.module}/templates/postgres-init.sh.tftpl", {
-    gitea_db_password = var.gitea_db_password
-    postgres_ip       = var.lxc_containers.postgres.ip_address
-    gitea_ip          = var.lxc_containers.gitea.ip_address
-  })
-  filename = "${path.module}/ansible/roles/postgres/files/postgres-init.sh"
-}
-
-resource "local_file" "gitea_init_script" {
-  count = contains(keys(var.lxc_containers), "postgres") && contains(keys(var.lxc_containers), "gitea") ? 1 : 0
-
-  content = templatefile("${path.module}/templates/gitea-init.sh.tftpl", {
-    gitea_db_password    = var.gitea_db_password
-    gitea_admin_password = var.gitea_admin_password
-    postgres_ip          = var.lxc_containers.postgres.ip_address
-  })
-  filename = "${path.module}/ansible/roles/gitea/files/gitea-init.sh"
 }

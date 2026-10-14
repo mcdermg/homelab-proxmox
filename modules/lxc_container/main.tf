@@ -8,7 +8,7 @@ resource "proxmox_virtual_environment_container" "this" {
   migrate = true
 
   # Container initialization
-  description  = try(each.value.description, "Managed by Terraform")
+  description  = coalesce(each.value.description, "Managed by Terraform")
   template     = try(each.value.template, false)
   unprivileged = try(each.value.unprivileged, true)
 
@@ -73,9 +73,10 @@ resource "proxmox_virtual_environment_container" "this" {
       }
     }
 
+    # Unset optional attributes are null, not errors, so try() would never fall back to the defaults
     user_account {
-      keys     = try(each.value.ssh_keys, var.default_ssh_keys)
-      password = try(each.value.password, var.default_password)
+      keys     = each.value.ssh_keys != null ? each.value.ssh_keys : var.default_ssh_keys
+      password = each.value.password != null ? each.value.password : var.default_password
     }
   }
 

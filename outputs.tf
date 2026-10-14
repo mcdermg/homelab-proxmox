@@ -78,9 +78,3 @@
 #  description = "Cloudflare Tunnel CNAME target"
 #  value       = "${cloudflare_zero_trust_tunnel_cloudflared.homelab.id}.cfargotunnel.com"
 #}
-
-output "pulse_admin_password" {
-  description = "Pulse web UI password for the admin user (tofu output -raw pulse_admin_password)"
-  value       = random_password.pulse_admin.result
-  sensitive   = true
-}

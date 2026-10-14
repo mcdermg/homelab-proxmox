@@ -1,6 +1,6 @@
 #!/bin/bash
 # Wait for PostgreSQL
-until timeout 1 bash -c "</dev/tcp/${postgres_ip}/5432" 2>/dev/null; do
+until timeout 1 bash -c "</dev/tcp/{{ postgres_ip }}/5432" 2>/dev/null; do
   echo "Waiting for PostgreSQL..."
   sleep 2
 done
@@ -9,10 +9,10 @@ if grep -q "DB_TYPE.*=.*mysql" /home/git/custom/conf/app.ini; then
   systemctl stop gitea
   cp /home/git/custom/conf/app.ini /home/git/custom/conf/app.ini.bak
   sed -i '/^\[database\]/,/^\[/ s/^DB_TYPE.*/DB_TYPE = postgres/' /home/git/custom/conf/app.ini
-  sed -i '/^\[database\]/,/^\[/ s/^HOST.*/HOST = ${postgres_ip}:5432/' /home/git/custom/conf/app.ini
+  sed -i '/^\[database\]/,/^\[/ s/^HOST.*/HOST = {{ postgres_ip }}:5432/' /home/git/custom/conf/app.ini
   sed -i '/^\[database\]/,/^\[/ s/^NAME.*/NAME = gitea/' /home/git/custom/conf/app.ini
   sed -i '/^\[database\]/,/^\[/ s/^USER.*/USER = gitea/' /home/git/custom/conf/app.ini
-  sed -i '/^\[database\]/,/^\[/ s/^PASSWD.*/PASSWD = ${gitea_db_password}/' /home/git/custom/conf/app.ini
+  sed -i '/^\[database\]/,/^\[/ s/^PASSWD.*/PASSWD = {{ gitea_db_password }}/' /home/git/custom/conf/app.ini
   systemctl start gitea
   sleep 5
 fi
@@ -20,7 +20,7 @@ fi
 if ! su - git -c "cd /home/git && ./gitea admin user list 2>/dev/null" | grep -qw "gitea"; then
   su - git -c "cd /home/git && ./gitea admin user create \
     --username gitea \
-    --password ${gitea_admin_password} \
+    --password {{ gitea_admin_password }} \
     --email gary@homelab.local \
     --admin"
 fi
