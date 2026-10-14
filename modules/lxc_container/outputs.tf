@@ -18,11 +18,6 @@ output "container_ip_addresses" {
   }
 }
 
-output "container_resources" {
-  description = "Raw container resource objects for advanced use cases"
-  value       = proxmox_virtual_environment_container.this
-}
-
 output "containers" {
   description = "Map of all container details"
   value = {

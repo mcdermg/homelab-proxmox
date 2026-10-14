@@ -183,7 +183,6 @@ No modules.
 | <a name="output_container_ids"></a> [container\_ids](#output\_container\_ids) | Map of container names to their VM IDs |
 | <a name="output_container_ip_addresses"></a> [container\_ip\_addresses](#output\_container\_ip\_addresses) | Map of container names to their configured IP addresses |
 | <a name="output_container_names"></a> [container\_names](#output\_container\_names) | List of all container names |
-| <a name="output_container_resources"></a> [container\_resources](#output\_container\_resources) | Raw container resource objects for advanced use cases |
 | <a name="output_container_status"></a> [container\_status](#output\_container\_status) | Map of container names to their running status |
 | <a name="output_containers"></a> [containers](#output\_containers) | Map of all container details |
 <!-- END_TF_DOCS -->
