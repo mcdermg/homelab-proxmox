@@ -145,45 +145,53 @@
   when: bind9_needs_config
 
 # The zones above are only written on first configuration, so later record changes are pushed here.
-# Each zone is compared with a fixed serial against the copy last pushed, so a run only pushes and
-# reloads when a record changed. That copy is updated last, so a failed run is retried next time.
+# They're compared with the live zones in the container, ignoring the serial, so a run only pushes and
+# reloads bind when a record changed. Nothing is kept on the node: the temporary folder is always removed.
 - name: Update the zones on a configured bind9 container
   when: not bind9_needs_config
   become: true
   vars:
-    bind9_zone_dir: "/root/bind9-{{ bind9_ctid }}-zones"
     bind9_zones:
       - db.homelab.local
       - db.1.168.192.in-addr.arpa
-    bind9_changed_zones: "{{ bind9_zone_compare.results | selectattr('changed') | map(attribute='item') | list }}"
+    bind9_changed_zones: "{{ bind9_zone_diff.results | selectattr('rc', 'ne', 0) | map(attribute='item') | list }}"
   block:
-    - name: Create the zone staging directory on the node
-      ansible.builtin.file:
-        path: "{{ bind9_zone_dir }}"
+    - name: Create a temporary folder for the zones on the node
+      ansible.builtin.tempfile:
         state: directory
-        mode: '0700'
+        suffix: -bind9-zones
+      register: bind9_zone_tmp
 
-    - name: Compare the zones with the copy last pushed
+    - name: Render the zones with a fixed serial for the comparison
       ansible.builtin.template:
         src: "{{ item }}.j2"
-        dest: "{{ bind9_zone_dir }}/{{ item }}.pushed"
+        dest: "{{ bind9_zone_tmp.path }}/{{ item }}.compare"
         mode: '0600'
       vars:
         bind9_zone_serial: 0
-      check_mode: true
       loop: "{{ bind9_zones }}"
-      register: bind9_zone_compare
+
+    - name: Compare with the live zones in the container, ignoring the serial
+      ansible.builtin.shell:
+        cmd: >-
+          pct exec {{ bind9_ctid }} -- cat /etc/bind/zones/{{ item }} | grep -v '; Serial' |
+          diff -q - <(grep -v '; Serial' {{ bind9_zone_tmp.path }}/{{ item }}.compare)
+        executable: /bin/bash
+      register: bind9_zone_diff
+      changed_when: false
+      failed_when: bind9_zone_diff.rc > 1
+      loop: "{{ bind9_zones }}"
 
     - name: Render the changed zones with a new serial
       ansible.builtin.template:
         src: "{{ item }}.j2"
-        dest: "{{ bind9_zone_dir }}/{{ item }}"
+        dest: "{{ bind9_zone_tmp.path }}/{{ item }}"
         mode: '0644'
       loop: "{{ bind9_changed_zones }}"
 
     - name: Push the changed zones into the container, check them and swap them in
       ansible.builtin.shell: >-
-        pct push {{ bind9_ctid }} {{ bind9_zone_dir }}/{{ item }} /etc/bind/zones/{{ item }}.new --perms 0644 &&
+        pct push {{ bind9_ctid }} {{ bind9_zone_tmp.path }}/{{ item }} /etc/bind/zones/{{ item }}.new --perms 0644 &&
         pct exec {{ bind9_ctid }} -- sh -c
         'named-checkzone {{ item | regex_replace('^db[.]', '') }} /etc/bind/zones/{{ item }}.new &&
         mv /etc/bind/zones/{{ item }}.new /etc/bind/zones/{{ item }}'
@@ -194,11 +202,9 @@
         cmd: "pct exec {{ bind9_ctid }} -- rndc reload"
       when: bind9_changed_zones | length > 0
 
-    - name: Record the pushed zones
-      ansible.builtin.template:
-        src: "{{ item }}.j2"
-        dest: "{{ bind9_zone_dir }}/{{ item }}.pushed"
-        mode: '0600'
-      vars:
-        bind9_zone_serial: 0
-      loop: "{{ bind9_changed_zones }}"
+  always:
+    - name: Remove the temporary zone folder
+      ansible.builtin.file:
+        path: "{{ bind9_zone_tmp.path }}"
+        state: absent
+      when: bind9_zone_tmp.path is defined
