@@ -22,6 +22,14 @@ locals {
       memory     = coalesce(vm.memory, var.k3s_roles[local.k3s_vm_roles[key]].memory)
     }
   }
+
+  # Internal DNS (bind9, homelab.local): an A and PTR record for every host OpenTofu knows the IP of
+  bind9_records = merge(
+    { for node, cfg in var.proxmox_nodes : node => cfg.address },
+    { for key, ct in var.lxc_containers : ct.name => ct.ip_address },
+    { for key, vm in local.k3s_vms : vm.name => vm.ip_address },
+    { "k3s-pi-01" = var.k3s_pi_01_ip, "k3s-pi-02" = var.k3s_pi_02_ip },
+  )
 }
 
 # PROXMOX NODES
@@ -240,8 +248,8 @@ resource "local_file" "ansible_hosts_file" {
   count = contains(keys(var.lxc_containers), "postgres") && contains(keys(var.lxc_containers), "gitea") ? 1 : 0
 
   content = templatefile("${path.module}/templates/ansible_hosts.ini.tftpl", {
-    # Proxmox host connection details
-    proxmox_node             = var.proxmox.node
+    # Proxmox connection details: every node for SSH, pve01's endpoint for the API
+    proxmox_nodes            = var.proxmox_nodes
     proxmox_host             = replace(replace(var.proxmox.endpoint, "https://", ""), ":8006", "")
     proxmox_ssh_user         = var.proxmox.ssh_user
     proxmox_ssh_port         = var.proxmox.ssh_port
@@ -249,6 +257,7 @@ resource "local_file" "ansible_hosts_file" {
     proxmox_api_token_secret = split("=", var.proxmox_auth.api_token)[1]
 
     # Container details for pct operations
+    lxc_nodes        = { for key, ct in var.lxc_containers : key => coalesce(ct.node_name, var.proxmox.node) }
     postgres_ctid    = var.lxc_containers.postgres.vm_id
     postgres_ip      = var.lxc_containers.postgres.ip_address
     gitea_ctid       = var.lxc_containers.gitea.vm_id
@@ -257,6 +266,9 @@ resource "local_file" "ansible_hosts_file" {
     bind9_ip         = var.lxc_containers.bind9.ip_address
     cloudflared_ctid = var.lxc_containers.cloudflared.vm_id
     cloudflared_ip   = var.lxc_containers.cloudflared.ip_address
+
+    # Internal DNS records for the bind9 zones, as JSON (Ansible reads it as a dict)
+    bind9_records = jsonencode(local.bind9_records)
 
     # Containers configured over SSH
     librespeed_ip = var.lxc_containers.librespeed.ip_address

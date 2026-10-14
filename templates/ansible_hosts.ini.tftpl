@@ -1,7 +1,9 @@
 # This is an auto generated file, please use Terraform and do not make manual changes
 
 [proxmox]
-${proxmox_node} ansible_host=${proxmox_host}
+%{ for node, cfg in proxmox_nodes ~}
+${node} ansible_host=${cfg.address} pm_node=${node}
+%{ endfor ~}
 
 [proxmox:vars]
 ansible_user=${proxmox_ssh_user}
@@ -9,11 +11,23 @@ ansible_port=${proxmox_ssh_port}
 pm_api_host=${proxmox_host}
 pm_api_token_id=${proxmox_api_token_id}
 pm_api_token_secret=${proxmox_api_token_secret}
-pm_node=${proxmox_node}
 # Postgres and Gitea first-boot passwords, used by the pct-based plays
 postgres_admin_password=${postgres_admin_password}
 gitea_db_password=${gitea_db_password}
 gitea_admin_password=${gitea_admin_password}
+
+# The Proxmox node holding each container that's configured with pct; its play runs there
+[postgres_node]
+${lxc_nodes.postgres}
+
+[gitea_node]
+${lxc_nodes.gitea}
+
+[bind9_node]
+${lxc_nodes.bind9}
+
+[cloudflared_node]
+${lxc_nodes.cloudflared}
 
 # Shared variables available to all hosts
 [all:vars]
@@ -26,6 +40,7 @@ gitea_ip=${gitea_ip}
 
 bind9_ctid=${bind9_ctid}
 bind9_ip=${bind9_ip}
+bind9_records=${bind9_records}
 
 cloudflared_ctid=${cloudflared_ctid}
 cloudflared_ip=${cloudflared_ip}

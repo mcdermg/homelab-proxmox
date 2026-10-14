@@ -39,10 +39,11 @@ locals {
     { name = "k8status", service = "http://192.168.1.11:80" },
     { name = "nginx", service = "http://192.168.1.12:80" },
     { name = "argocd", service = "http://192.168.1.13" },
-    { name = "proxmox", service = "https://192.168.1.250:8006" },
+    { name = "pve01", service = "https://${var.proxmox_nodes.pve01.address}:8006" },
     { name = "pulse", service = "http://${var.lxc_containers.pulse.ip_address}:7655" },
     { name = "grafana", service = "http://192.168.1.14" },
     { name = "prometheus", service = "http://192.168.1.15" },
+    { name = "pve02", service = "https://${var.proxmox_nodes.pve02.address}:8006" },
   ]
   # Derived map for for_each resources (DNS records, access applications) — order irrelevant there
   tunnel_services = { for item in local.tunnel_services_list : item.name => item.service }
@@ -98,7 +99,8 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "homelab" {
         for item in local.tunnel_services_list : {
           hostname = "${item.name}.${var.cloudflare_zone}"
           service  = item.service
-          origin_request = item.name == "proxmox" ? {
+          # Proxmox serves a self-signed certificate
+          origin_request = startswith(item.service, "https://") ? {
             no_tls_verify = true
           } : null
         }
