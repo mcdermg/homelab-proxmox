@@ -12,13 +12,10 @@
     postgres_needs_config: "{{ postgres_inithooks_check.stdout | int > 1 }}"
 
 - name: Stop postgres container if needs configuration
-  community.proxmox.proxmox:
-    api_host: "{{ pm_api_host }}"
-    api_token_id: "{{ pm_api_token_id }}"
-    api_token_secret: "{{ pm_api_token_secret }}"
-    node: "{{ pm_node }}"
-    vmid: "{{ postgres_ctid }}"
-    state: stopped
+  ansible.builtin.shell: "if pct status {{ postgres_ctid }} | grep -q running; then pct stop {{ postgres_ctid }} && echo stopped; fi"
+  register: postgres_stop
+  changed_when: "'stopped' in postgres_stop.stdout"
+  become: true
   when: postgres_needs_config
 
 - name: Mount postgres container for file operations

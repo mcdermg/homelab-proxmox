@@ -12,13 +12,10 @@
     cloudflared_needs_config: "{{ cloudflared_inithooks_check.stdout | int > 1 }}"
 
 - name: Stop cloudflared container if needs configuration
-  community.proxmox.proxmox:
-    api_host: "{{ pm_api_host }}"
-    api_token_id: "{{ pm_api_token_id }}"
-    api_token_secret: "{{ pm_api_token_secret }}"
-    node: "{{ pm_node }}"
-    vmid: "{{ cloudflared_ctid }}"
-    state: stopped
+  ansible.builtin.shell: "if pct status {{ cloudflared_ctid }} | grep -q running; then pct stop {{ cloudflared_ctid }} && echo stopped; fi"
+  register: cloudflared_stop
+  changed_when: "'stopped' in cloudflared_stop.stdout"
+  become: true
   when: cloudflared_needs_config
 
 - name: Mount cloudflared container for file operations

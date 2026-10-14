@@ -12,13 +12,10 @@
     bind9_needs_config: "{{ bind9_inithooks_check.stdout | int > 1 }}"
 
 - name: Stop bind9 container if needs configuration
-  community.proxmox.proxmox:
-    api_host: "{{ pm_api_host }}"
-    api_token_id: "{{ pm_api_token_id }}"
-    api_token_secret: "{{ pm_api_token_secret }}"
-    node: "{{ pm_node }}"
-    vmid: "{{ bind9_ctid }}"
-    state: stopped
+  ansible.builtin.shell: "if pct status {{ bind9_ctid }} | grep -q running; then pct stop {{ bind9_ctid }} && echo stopped; fi"
+  register: bind9_stop
+  changed_when: "'stopped' in bind9_stop.stdout"
+  become: true
   when: bind9_needs_config
 
 - name: Mount bind9 container for file operations

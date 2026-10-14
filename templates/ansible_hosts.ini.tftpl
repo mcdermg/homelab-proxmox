@@ -2,15 +2,13 @@
 
 [proxmox]
 %{ for node, cfg in proxmox_nodes ~}
-${node} ansible_host=${cfg.address} pm_node=${node}
+${node} ansible_host=${cfg.address}
 %{ endfor ~}
 
 [proxmox:vars]
 ansible_user=${proxmox_ssh_user}
 ansible_port=${proxmox_ssh_port}
 pm_api_host=${proxmox_host}
-pm_api_token_id=${proxmox_api_token_id}
-pm_api_token_secret=${proxmox_api_token_secret}
 # Postgres and Gitea first-boot passwords, used by the pct-based plays
 postgres_admin_password=${postgres_admin_password}
 gitea_db_password=${gitea_db_password}

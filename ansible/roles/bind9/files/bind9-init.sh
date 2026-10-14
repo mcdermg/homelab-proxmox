@@ -1,4 +1,7 @@
 #!/bin/bash
+# Log to a file, not the console: nothing reads a headless container's console, so once its buffer fills
+# any write blocks (seen with etckeeper's git commit after apt)
+exec >>/var/log/99custom-bind9-init.log 2>&1
 set -euo pipefail
 
 STAMP_DIR="/var/lib/inithooks"

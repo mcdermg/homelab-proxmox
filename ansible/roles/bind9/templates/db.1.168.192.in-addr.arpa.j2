@@ -6,7 +6,7 @@ $ORIGIN 1.168.192.in-addr.arpa.
 
 ; Start of Authority
 @       IN      SOA     ns.homelab.local. admin.homelab.local. (
-                        {{ ansible_date_time.epoch }}  ; Serial (Unix timestamp)
+                        {{ ansible_facts['date_time']['epoch'] }}  ; Serial (Unix timestamp)
                         12h                             ; Refresh
                         15m                             ; Retry
                         3w                              ; Expire
