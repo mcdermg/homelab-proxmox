@@ -54,6 +54,27 @@ ansible-playbook k3s.yaml -e k3s_server_serial=1          # Upgrade after bumpin
 ansible-playbook k3s.orchestration.reset                  # Uninstall k3s from every node
 ```
 
+## Gitea Users and Mirrors
+
+`gitea/` is a separate OpenTofu root with its own state (`homelab/gitea/terraform.tfstate` in the same R2 bucket). The Gitea provider needs Gitea running, which only happens after the root apply and the Ansible playbook, so it can't live in the root config. It creates a user, an organisation (the admin and the user are both owners) and the pull mirrors in `gitea_mirrors` inside that organisation (by default `homelab-argocd-config`, which ArgoCD pulls from).
+
+Run order on a rebuild:
+
+```bash
+tf apply                                  # root: containers, VMs, tunnel
+cd ansible && ansible-playbook playbook.yaml && cd ..
+tf -chdir=gitea init
+tf -chdir=gitea apply                     # needs gitea/terraform.tfvars
+```
+
+After Gitea (and its Postgres) is rebuilt, the `gitea/` state still points at the old objects. The org, mirror and team membership notice they're gone and are recreated, but the provider errors on the missing user (`user not found with id N`), so drop it from state first:
+
+```bash
+tf -chdir=gitea state rm gitea_user.owner
+```
+
+`gitea/terraform.tfvars` (gitignored) sets `gitea_url`, `gitea_admin` (the admin's username and the root `gitea_admin.password`), `gitea_user` (username, an email the admin isn't using, password) and `gitea_org` (organisation name).
+
 ## Networking
 
 ### Lab IP Layout
@@ -219,7 +240,7 @@ tofu init
 | <a name="input_cloudflare_api_token"></a> [cloudflare\_api\_token](#input\_cloudflare\_api\_token) | Cloudflare API token for managing DNS and tunnels | `string` | n/a | yes |
 | <a name="input_cloudflare_zone"></a> [cloudflare\_zone](#input\_cloudflare\_zone) | Cloudflare zone/domain name | `string` | n/a | yes |
 | <a name="input_cloudflare_zone_id"></a> [cloudflare\_zone\_id](#input\_cloudflare\_zone\_id) | Cloudflare Zone ID for the domain | `string` | n/a | yes |
-| <a name="input_gitea_admin_password"></a> [gitea\_admin\_password](#input\_gitea\_admin\_password) | Password for Gitea admin user | `string` | n/a | yes |
+| <a name="input_gitea_admin"></a> [gitea\_admin](#input\_gitea\_admin) | Gitea admin user (TurnKey's gitea account): its password, and its email, which is also the mailer's From address | <pre>object({<br/>    password = string<br/>    email    = string<br/>  })</pre> | n/a | yes |
 | <a name="input_gitea_db_password"></a> [gitea\_db\_password](#input\_gitea\_db\_password) | Password for Gitea PostgreSQL database user | `string` | n/a | yes |
 | <a name="input_iso_downloads"></a> [iso\_downloads](#input\_iso\_downloads) | ISO files to download to Proxmox storage | <pre>map(object({<br/>    url                     = string<br/>    file_name               = optional(string)<br/>    checksum                = optional(string)<br/>    checksum_algorithm      = optional(string) # "md5", "sha1", "sha224", "sha256", "sha384", "sha512"<br/>    decompression_algorithm = optional(string)<br/>    verify                  = optional(bool, true)<br/>    overwrite               = optional(bool, true)<br/>    overwrite_unmanaged     = optional(bool, false)<br/>    upload_timeout          = optional(number, 1800)<br/>  }))</pre> | `{}` | no |
 | <a name="input_k3s_defaults"></a> [k3s\_defaults](#input\_k3s\_defaults) | Default configuration for K3s VMs | <pre>object({<br/>    disk_interface = string<br/>    disk_size      = number<br/>    qemu_agent = object({<br/>      enabled = bool<br/>      timeout = string<br/>    })<br/>    behavior = object({<br/>      on_boot         = bool<br/>      started         = bool<br/>      stop_on_destroy = bool<br/>    })<br/>  })</pre> | <pre>{<br/>  "behavior": {<br/>    "on_boot": true,<br/>    "started": true,<br/>    "stop_on_destroy": true<br/>  },<br/>  "disk_interface": "scsi0",<br/>  "disk_size": 17,<br/>  "qemu_agent": {<br/>    "enabled": false,<br/>    "timeout": "4m"<br/>  }<br/>}</pre> | no |

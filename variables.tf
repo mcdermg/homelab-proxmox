@@ -236,10 +236,13 @@ variable "gitea_db_password" {
   sensitive   = true
 }
 
-variable "gitea_admin_password" {
-  description = "Password for Gitea admin user"
-  type        = string
-  sensitive   = true
+variable "gitea_admin" {
+  description = "Gitea admin user (TurnKey's gitea account): its password, and its email, which is also the mailer's From address"
+  type = object({
+    password = string
+    email    = string
+  })
+  sensitive = true
 }
 
 variable "postgres_admin_password" {
