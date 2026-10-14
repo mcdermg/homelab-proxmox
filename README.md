@@ -230,5 +230,7 @@ tofu init
 
 ## Outputs
 
-No outputs.
+| Name | Description |
+| ---- | ----------- |
+| <a name="output_dns_records"></a> [dns\_records](#output\_dns\_records) | Public hostname of each service behind the Cloudflare tunnel, and the origin the tunnel sends it to |
 <!-- END_TF_DOCS -->

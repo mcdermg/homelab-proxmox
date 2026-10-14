@@ -111,7 +111,7 @@ homelab-proxmox/
 ├── variables.tf                # All variable definitions with types and defaults
 ├── main.tf                     # Module calls (downloads, k3s_cluster, lxc_containers) and generated Ansible files
 ├── cloudflare.tf               # Cloudflare tunnel, DNS records and Access applications
-├── outputs.tf                  # Root outputs (currently none)
+├── outputs.tf                  # Root outputs (Cloudflare tunnel hostnames and their origins)
 ├── terraform.tfvars            # Variable values (gitignored)
 ├── modules/
 │   ├── proxmox_node/           # Per-node host config (APT repos, ZFS pool), one instance per node
