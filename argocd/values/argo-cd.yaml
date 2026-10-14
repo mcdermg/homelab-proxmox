@@ -4,3 +4,10 @@ configs:
   credentialTemplates:
     gitea:
       url: http://192.168.1.117/homelab   # every repo in the homelab Gitea org
+  params:
+    server.insecure: true   # the tunnel origin is plain http://; without this argocd-server redirects to HTTPS
+server:
+  service:
+    type: LoadBalancer
+    annotations:
+      metallb.io/loadBalancerIPs: 192.168.1.13
