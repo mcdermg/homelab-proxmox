@@ -131,14 +131,3 @@ output "vm_mac_addresses" {
     vm.name => vm.mac_addresses
   }
 }
-
-output "vm_ipv4_addresses" {
-  description = "IPv4 addresses reported by QEMU agent"
-  value = {
-    for key, vm in proxmox_virtual_environment_vm.k3s_nodes :
-    vm.name => vm.ipv4_addresses
-  }
-  depends_on = [
-    proxmox_virtual_environment_vm.k3s_nodes
-  ]
-}

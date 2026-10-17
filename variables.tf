@@ -178,7 +178,7 @@ variable "k3s_defaults" {
     disk_interface = "scsi0"
     disk_size      = 17
     qemu_agent = {
-      enabled = false
+      enabled = true
       timeout = "4m"
     }
     behavior = {

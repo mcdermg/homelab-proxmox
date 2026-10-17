@@ -215,16 +215,11 @@ Cloud-init handles:
 
 ### QEMU Guest Agent
 
-**Critical for OpenTofu operations:**
-- Enables IP address detection
-- Allows graceful shutdown
-- Provides VM state information
-- Must be enabled in template and running in guest
-
-**Timeout considerations:**
-- First boot can be slow (cloud-init initialization)
-- Set reasonable timeout: `15m` for initial provisioning
-- Agent must start before OpenTofu can complete
+- Enabled on the k3s VMs (`k3s_defaults.qemu_agent.enabled`), installed in the guest by `ansible/k3s.yaml`: the Debian cloud image doesn't ship it
+- `wait_for_ip { disabled = true }`: the root apply runs before Ansible, so OpenTofu must not wait for the agent
+- Pulse reads guest memory and disk through it; without it memory shows near 100%
+- Enabling it or changing the balloon setting only takes effect after a stop/start from Proxmox, not a reboot inside the guest
+- Install the package before enabling the flag: with the flag on and no agent running, Proxmox Shutdown and Reboot time out and lock the VM
 
 ### VM Lifecycle
 
@@ -405,7 +400,6 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
 ### Common Issues
 
 **"timeout while waiting for the virtual machine"**
-- QEMU agent not installed in template
 - VM taking too long to boot
 - Increase `k3s_defaults.qemu_agent.timeout`
 

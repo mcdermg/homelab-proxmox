@@ -115,7 +115,6 @@ No modules.
 | <a name="output_control_plane_ips"></a> [control\_plane\_ips](#output\_control\_plane\_ips) | IP addresses of control plane nodes |
 | <a name="output_vm_ids"></a> [vm\_ids](#output\_vm\_ids) | Map of VM names to their VM IDs |
 | <a name="output_vm_ip_addresses"></a> [vm\_ip\_addresses](#output\_vm\_ip\_addresses) | Map of VM names to their IP addresses |
-| <a name="output_vm_ipv4_addresses"></a> [vm\_ipv4\_addresses](#output\_vm\_ipv4\_addresses) | IPv4 addresses reported by QEMU agent |
 | <a name="output_vm_mac_addresses"></a> [vm\_mac\_addresses](#output\_vm\_mac\_addresses) | MAC addresses of VM network interfaces |
 | <a name="output_vm_names"></a> [vm\_names](#output\_vm\_names) | List of all VM names |
 | <a name="output_vm_network_details"></a> [vm\_network\_details](#output\_vm\_network\_details) | Complete network configuration for all VMs |

@@ -5,6 +5,20 @@
 # Upgrade: bump k3s_version, then ansible-playbook k3s.yaml -e k3s_server_serial=1
 # Tear down: ansible-playbook k3s.orchestration.reset
 
+# Proxmox has the agent enabled on the k3s VMs; the Debian cloud image doesn't ship it.
+# udev starts it once the VM has the agent device, after a stop/start from Proxmox
+- name: Install the QEMU guest agent on the k3s VMs
+  hosts: k3s_control:k3s_workers
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Install qemu-guest-agent
+      ansible.builtin.apt:
+        name: qemu-guest-agent
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
 - name: Install k3s
   ansible.builtin.import_playbook: k3s.orchestration.site
 

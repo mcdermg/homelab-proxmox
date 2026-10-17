@@ -94,14 +94,22 @@ resource "proxmox_virtual_environment_vm" "k3s_nodes" {
   }
 
   # MEMORY CONFIGURATION
+  # Fixed size (floating = dedicated): keeps the balloon device for memory stats without
+  # shrinking the guest under the kubelet
   memory {
     dedicated = each.value.memory
+    floating  = each.value.memory
   }
 
   # QEMU GUEST AGENT
+  # Installed by ansible/k3s.yaml after the VM exists, so don't wait for it to report IPs
   agent {
     enabled = var.qemu_agent_enabled
     timeout = var.qemu_agent_timeout
+
+    wait_for_ip {
+      disabled = true
+    }
   }
 
   # DISK CONFIGURATION
