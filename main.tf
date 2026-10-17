@@ -272,6 +272,9 @@ resource "local_file" "ansible_hosts_file" {
     librespeed_ip = var.lxc_containers.librespeed.ip_address
     pulse_ip      = var.lxc_containers.pulse.ip_address
 
+    # Slack webhook for lab alerts
+    slack_alerting_webhook = var.slack_alerting_webhook
+
     # Pulse first-time setup
     pulse_admin_password   = var.pulse_admin_password
     pulse_api_token        = random_password.pulse_api_token.result

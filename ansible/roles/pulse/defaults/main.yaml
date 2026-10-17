@@ -7,3 +7,7 @@ pulse_sha256: ffb2f3e6193f79d81e401d5319bfc7f57e3b1eb4c5637e6f19fed67e1bd1dc48
 pulse_api_url: http://127.0.0.1:7655
 pulse_admin_user: admin
 pulse_connection_name: homelab
+
+# Slack alerts; the webhook URL comes from tfvars through hosts.ini
+pulse_slack_webhook_name: Slack
+pulse_slack_minimum_severity: warning # all, warning or critical

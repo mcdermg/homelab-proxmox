@@ -257,6 +257,12 @@ variable "pulse_admin_password" {
   sensitive   = true
 }
 
+variable "slack_alerting_webhook" {
+  description = "Slack incoming webhook URL for lab alerts (Pulse and other alerting)"
+  type        = string
+  sensitive   = true
+}
+
 # K3S CLUSTER CONFIGURATION
 variable "k3s_roles" {
   description = "k3s VM roles: VM ID range (VM ID = last IP octet) and default size"

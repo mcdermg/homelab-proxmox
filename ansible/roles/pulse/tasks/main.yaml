@@ -162,3 +162,51 @@
   changed_when: true
   no_log: true
   when: pulse_nodes.json | selectattr('type', 'equalto', 'pve') | list | length == 0
+
+# ALERTS TO SLACK
+# Matched by name: created if missing, updated if the URL or severity changed
+- name: List the Pulse webhooks
+  ansible.builtin.uri:
+    url: "{{ pulse_api_url }}/api/notifications/webhooks"
+    headers:
+      X-API-Token: "{{ pulse_api_token }}"
+    return_content: true
+  register: pulse_webhooks
+  no_log: true
+
+- name: Add or update the Slack webhook
+  ansible.builtin.uri:
+    url: "{{ pulse_api_url }}/api/notifications/webhooks{{ '/' ~ pulse_slack_current.id if pulse_slack_current else '' }}"
+    method: "{{ 'PUT' if pulse_slack_current else 'POST' }}"
+    headers:
+      X-API-Token: "{{ pulse_api_token }}"
+    body_format: json
+    body:
+      name: "{{ pulse_slack_webhook_name }}"
+      url: "{{ slack_alerting_webhook }}"
+      method: POST
+      service: slack
+      enabled: true
+      minimumSeverity: "{{ pulse_slack_minimum_severity }}"
+    status_code: [200, 201]
+  vars:
+    pulse_slack_current: "{{ pulse_webhooks.json | selectattr('name', 'equalto', pulse_slack_webhook_name) | first | default({}) }}"
+  changed_when: true
+  no_log: true
+  when: >-
+    not pulse_slack_current
+    or pulse_slack_current.url != slack_alerting_webhook
+    or pulse_slack_current.minimumSeverity | default('') != pulse_slack_minimum_severity
+
+# A new install detects alerts but holds delivery until it's turned on; Pulse answers
+# "Alerts already activated" once it is. Turning it on sends the open critical alerts straight away
+- name: Turn on alert delivery
+  ansible.builtin.uri:
+    url: "{{ pulse_api_url }}/api/alerts/activate"
+    method: POST
+    headers:
+      X-API-Token: "{{ pulse_api_token }}"
+    return_content: true
+  register: pulse_activate
+  changed_when: pulse_activate.json.message != 'Alerts already activated'
+  no_log: true
