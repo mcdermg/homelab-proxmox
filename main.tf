@@ -270,6 +270,7 @@ resource "local_file" "ansible_hosts_file" {
     # Internal DNS records and the bind9 servers' IPs (the zones' name servers), as JSON (Ansible reads them as a dict and a list)
     bind9_records = jsonencode(local.bind9_records)
     bind9_ips     = jsonencode([for ct in values(local.bind9_containers) : ct.ip_address])
+    bind9_vip     = var.bind9_vip
 
     # Containers configured over SSH
     librespeed_ip = var.lxc_containers.librespeed.ip_address

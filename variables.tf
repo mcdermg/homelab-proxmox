@@ -202,6 +202,12 @@ variable "network" {
   }
 }
 
+variable "bind9_vip" {
+  description = "Floating DNS IP that keepalived moves to whichever bind9 container is up (LAB-117). The MikroTik forwards homelab.local to it, so keep mikrotik-hapac2's internal_dns.servers in step. Not a VMID, so no LXC may use it"
+  type        = string
+  default     = "192.168.1.153"
+}
+
 # SSH ACCESS
 variable "ssh_public_key_file" {
   description = "Public key authorized on every k3s VM (cloud-init user) and LXC container (root), read from the machine running tofu"

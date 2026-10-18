@@ -53,6 +53,7 @@ gitea_ip=${gitea_ip}
 
 bind9_records=${bind9_records}
 bind9_ips=${bind9_ips}
+bind9_vip=${bind9_vip}
 
 # Cloudflare Tunnel
 cloudflare_tunnel_id=${cloudflare_tunnel_id}
@@ -65,7 +66,12 @@ slack_alerting_webhook=${slack_alerting_webhook}
 lxc_root_password=${lxc_root_password}
 lxc_ssh_public_key=${lxc_ssh_public_key}
 
-# Direct container access for post-configuration
+# Direct container access for post-configuration (root over SSH, from [lxc_containers:vars])
+[bind9_host]
+%{ for key, ct in bind9_containers ~}
+${ct.name} ansible_host=${ct.ip_address}
+%{ endfor ~}
+
 [cloudflared_host]
 %{ for key, ct in cloudflared_containers ~}
 ${ct.name} ansible_host=${ct.ip_address}

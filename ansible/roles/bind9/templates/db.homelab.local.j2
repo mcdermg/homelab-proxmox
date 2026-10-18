@@ -35,6 +35,6 @@ prometheus IN   A       192.168.1.15
 alertmanager IN A       192.168.1.16
 
 ; Aliases
-dns     IN      CNAME   ns1.homelab.local.
+dns     IN      A       {{ bind9_vip }}  ; floating IP, on whichever bind9 is up
 git     IN      CNAME   gitea.homelab.local.
 db      IN      CNAME   postgres.homelab.local.

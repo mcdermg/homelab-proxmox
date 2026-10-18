@@ -1,0 +1,22 @@
+---
+# roles/keepalived/tasks/main.yaml
+# Runs on every host in bind9_host; each one's VRRP peers are the others
+- name: Install keepalived
+  ansible.builtin.apt:
+    name: keepalived
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Configure keepalived
+  ansible.builtin.template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+    mode: '0644'
+  notify: Restart keepalived
+
+- name: Start and enable keepalived
+  ansible.builtin.service:
+    name: keepalived
+    state: started
+    enabled: true

@@ -66,7 +66,7 @@ Control plane VMs use VM IDs/IPs 210–214 and workers use 215–220, set as ran
 | `.2`–`.9` | Network gear (spare) |
 | `.10`–`.49` | k8s LoadBalancer pool (MetalLB) |
 | `.50`–`.99` | DHCP pool (set in mikrotik-hapac2) |
-| `.100`–`.199` | LXCs (VMID = last octet) |
+| `.100`–`.199` | LXCs (VMID = last octet), except `.153`: the bind9 floating DNS IP (keepalived) |
 | `.200`–`.239` | k3s VMs (VMID = last octet) |
 | `.240`–`.248` | Pis and other physical hosts |
 | `.249` | MikroTik ISP monitor container |

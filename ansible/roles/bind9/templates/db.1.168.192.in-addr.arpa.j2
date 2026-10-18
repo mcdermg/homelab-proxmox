@@ -28,6 +28,7 @@ $ORIGIN 1.168.192.in-addr.arpa.
 {% for ip in bind9_ips %}
 {{ '%-7s' | format(ip.split('.')[-1]) }} IN      PTR     ns{{ loop.index }}.homelab.local.
 {% endfor %}
+{{ '%-7s' | format(bind9_vip.split('.')[-1]) }} IN      PTR     dns.homelab.local.
 
 ; Kubernetes Services
 11      IN      PTR     k8status.homelab.local.

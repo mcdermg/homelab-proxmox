@@ -60,6 +60,7 @@
           - postgres_ip is defined
           - gitea_ip is defined
           - bind9_ips is defined
+          - bind9_vip is defined
           - cloudflare_tunnel_id is defined
           - cloudflare_tunnel_token is defined
         fail_msg: "Required container variables not defined in inventory"
@@ -135,6 +136,13 @@
           - "Forward lookup: gitea.homelab.local → 192.168.1.117 ✓"
           - "Reverse lookup: 192.168.1.117 → gitea.homelab.local ✓"
           - "================================"
+
+# One DNS IP on whichever bind9 is up, so the MikroTik has a single server to forward to (LAB-117)
+- name: Float the DNS IP between the bind9 servers
+  hosts: bind9_host
+  gather_facts: false
+  roles:
+    - keepalived
 
 - name: Configure cloudflared container via Proxmox
   hosts: cloudflared_node

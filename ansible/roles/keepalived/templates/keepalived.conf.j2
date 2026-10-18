@@ -1,0 +1,43 @@
+# Managed by Ansible (homelab-proxmox keepalived role)
+# Floats bind9_vip to whichever bind9 is up. nopreempt keeps the IP where it is when the other server comes back,
+# so a recovery doesn't move it a second time
+global_defs {
+    router_id {{ inventory_hostname }}
+    script_user root
+    enable_script_security
+}
+
+# Give the IP up if named stops answering, not only when the container stops. A script rather than track_process:
+# track_process needs kernel process events, which an unprivileged LXC refuses (errno 111). Not pidof either: it's a
+# symlink to killall5, which keepalived resolves under enable_script_security, so the check always failed
+vrrp_script named {
+    script "/usr/sbin/rndc status"
+    interval 2
+    fall 2
+    rise 2
+}
+
+vrrp_instance dns {
+    state BACKUP
+    nopreempt
+    interface {{ keepalived_interface }}
+    virtual_router_id {{ keepalived_router_id }}
+    priority {{ 150 - 50 * groups['bind9_host'].index(inventory_hostname) }}
+    advert_int 1
+
+    # Unicast, so nothing depends on multicast across the Proxmox bridges
+    unicast_src_ip {{ ansible_host }}
+    unicast_peer {
+{% for host in groups['bind9_host'] | difference([inventory_hostname]) %}
+        {{ hostvars[host].ansible_host }}
+{% endfor %}
+    }
+
+    virtual_ipaddress {
+        {{ bind9_vip }}/32 dev {{ keepalived_interface }}
+    }
+
+    track_script {
+        named
+    }
+}

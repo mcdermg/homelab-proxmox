@@ -8,7 +8,7 @@ OpenTofu + Ansible configuration for Proxmox VE homelab infrastructure including
 - LibreSpeed (CT 111) - Speed test (`librespeed/speedtest-rust`), Debian 13
 - Pulse (CT 112) - Proxmox cluster monitoring, Debian 13. Login: `admin` / `pulse_admin_password` from `terraform.tfvars`. Alerts (warning and up) go to Slack via `slack_alerting_webhook`; thresholds are set by the role from `pulse_alert_config`
 - Cloudflared (CT 113 on pve02, CT 118 on pve01) - Cloudflare Tunnel client, two replicas of the same tunnel so it stays up with one node down
-- Bind9 (CT 115 on pve02, CT 119 on pve01) - DNS server, both rendered with the same zones (`ns1`, `ns2`)
+- Bind9 (CT 115 on pve02, CT 119 on pve01) - DNS server, both rendered with the same zones (`ns1`, `ns2`). keepalived keeps `bind9_vip` (`.153`, `dns.homelab.local`) on whichever is up, and the MikroTik forwards `homelab.local` to it
 - Postgres (CT 116) - Database server
 - Gitea (CT 117) - Git server
 
@@ -120,7 +120,7 @@ Layout for `192.168.1.0/24`. The DHCP pool and static leases are managed in [mik
 | `.2`–`.9` | Network gear (spare) |
 | `.10`–`.49` | k8s LoadBalancer pool (MetalLB) |
 | `.50`–`.99` | DHCP pool |
-| `.100`–`.199` | LXCs (VMID = last octet) |
+| `.100`–`.199` | LXCs (VMID = last octet), except `.153`: the bind9 floating DNS IP (keepalived) |
 | `.200`–`.239` | k3s VMs (VMID = last octet) |
 | `.240`–`.248` | Pis and other physical hosts (Pi 4 `.241`, Pi 3 `.242`) |
 | `.249` | MikroTik ISP monitor container |
@@ -270,6 +270,7 @@ tofu init
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_apt_repositories"></a> [apt\_repositories](#input\_apt\_repositories) | APT standard repository handles to enable or disable on every Proxmox node | <pre>object({<br/>    enabled  = list(string)<br/>    disabled = list(string)<br/>  })</pre> | <pre>{<br/>  "disabled": [<br/>    "enterprise",<br/>    "ceph-squid-enterprise"<br/>  ],<br/>  "enabled": [<br/>    "no-subscription"<br/>  ]<br/>}</pre> | no |
+| <a name="input_bind9_vip"></a> [bind9\_vip](#input\_bind9\_vip) | Floating DNS IP that keepalived moves to whichever bind9 container is up (LAB-117). The MikroTik forwards homelab.local to it, so keep mikrotik-hapac2's internal\_dns.servers in step. Not a VMID, so no LXC may use it | `string` | `"192.168.1.153"` | no |
 | <a name="input_cloudflare_account_id"></a> [cloudflare\_account\_id](#input\_cloudflare\_account\_id) | Cloudflare Account ID for tunnel management | `string` | n/a | yes |
 | <a name="input_cloudflare_api_token"></a> [cloudflare\_api\_token](#input\_cloudflare\_api\_token) | Cloudflare API token for managing DNS and tunnels | `string` | n/a | yes |
 | <a name="input_cloudflare_zone"></a> [cloudflare\_zone](#input\_cloudflare\_zone) | Cloudflare zone/domain name | `string` | n/a | yes |

@@ -1,0 +1,4 @@
+---
+# roles/keepalived/defaults/main.yaml
+keepalived_interface: eth0
+keepalived_router_id: 53

@@ -1,0 +1,6 @@
+---
+# roles/keepalived/handlers/main.yaml
+- name: Restart keepalived
+  ansible.builtin.service:
+    name: keepalived
+    state: restarted
