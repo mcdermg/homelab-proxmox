@@ -391,6 +391,7 @@ variable "lxc_containers" {
       memory           = 1024
       disk_size        = 8
       swap             = 256
+      node_name        = "pve02"
       ip_address       = "192.168.1.112"
       features = {
         nesting = true
