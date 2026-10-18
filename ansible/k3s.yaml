@@ -34,3 +34,50 @@
       become: true
       register: k3s_worker_label
       changed_when: "'not labeled' not in k3s_worker_label.stdout"
+
+# The cluster's Pulse agent (homelab-argocd-config, LAB-121) reads its token from this Secret,
+# which stays out of the public repo. Run on its own with --tags monitoring
+- name: Give the Pulse Kubernetes agent its token
+  hosts: server[0]
+  gather_facts: false
+  become: true
+  tags: monitoring
+  tasks:
+    - name: Check for the agent's Secret
+      ansible.builtin.command:
+        cmd: k3s kubectl -n pulse get secret pulse-agent-env
+      register: pulse_agent_secret
+      changed_when: false
+      failed_when: pulse_agent_secret.rc not in [0, 1]
+
+    - name: Get a token for the agent
+      ansible.builtin.import_role:
+        name: pulse_agent
+        tasks_from: token
+      vars:
+        pulse_agent_token_name: agent-k3s
+        pulse_agent_token_scopes:
+          - kubernetes:report
+        pulse_agent_installed: "{{ pulse_agent_secret.rc == 0 }}"
+
+    # Through stdin, so the token never reaches the command line
+    - name: Write the token to the agent's Secret
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          k3s kubectl create namespace pulse --dry-run=client -o yaml | k3s kubectl apply -f -
+          k3s kubectl -n pulse create secret generic pulse-agent-env --from-file=PULSE_TOKEN=/dev/stdin \
+            --dry-run=client -o yaml | k3s kubectl apply --server-side -f -
+        executable: /bin/bash
+        stdin: "{{ pulse_agent_token_new.json.token }}"
+        stdin_add_newline: false
+      changed_when: true
+      no_log: true
+      when: pulse_agent_token_new is changed
+
+    # The agent reads the token at startup; a first-time Secret needs no restart, the pod is waiting for it
+    - name: Restart the agent onto the new token
+      ansible.builtin.command:
+        cmd: k3s kubectl -n pulse rollout restart deployment/pulse-agent
+      changed_when: true
+      when: pulse_agent_token_new is changed and pulse_agent_secret.rc == 0

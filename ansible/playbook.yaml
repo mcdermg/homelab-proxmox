@@ -36,6 +36,7 @@
   hosts: proxmox
   gather_facts: false
   become: true
+  tags: monitoring
 
   tasks:
     - name: Install prometheus-node-exporter
@@ -254,5 +255,15 @@
 - name: Install and configure Pulse
   hosts: pulse_host
   gather_facts: false
+  tags: monitoring
   roles:
     - pulse
+
+# The Pis aren't in Proxmox, so Pulse only sees them through an agent (LAB-120)
+- name: Install the Pulse agent on the Raspberry Pis
+  hosts: k3s_pis
+  gather_facts: false
+  become: true
+  tags: monitoring
+  roles:
+    - pulse_agent

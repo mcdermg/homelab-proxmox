@@ -1,0 +1,70 @@
+---
+# roles/pulse_agent/tasks/main.yaml
+# Pulse host agent (systemd) installed with the Pulse server's own installer, so it matches the server's
+# version and updates itself from it. Runs as root, which smartctl needs; command execution stays off
+
+# S.M.A.R.T.
+- name: Install smartmontools
+  ansible.builtin.apt:
+    name: smartmontools
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+# The Pis' OWC PA023U3 USB-SATA cable isn't in smartctl's database; without this, untyped
+# smartctl (which the Pulse agent uses) fails with "Unknown USB bridge"
+- name: Tell smartctl the USB-SATA bridge needs SAT passthrough
+  ansible.builtin.copy:
+    dest: /etc/smart_drivedb.h
+    content: |
+      { "USB: OWC PA023U3; ", "0x7825:0xa2a4", "", "", "-d sat" },
+    mode: '0644'
+
+# TOKEN
+- name: Check whether the agent is installed
+  ansible.builtin.stat:
+    path: /etc/systemd/system/pulse-agent.service
+  register: pulse_agent_unit
+
+- name: Get a token for the agent
+  ansible.builtin.import_tasks: token.yaml
+  vars:
+    pulse_agent_installed: "{{ pulse_agent_unit.stat.exists }}"
+
+# INSTALL
+# Also reruns on an installed agent when Pulse was rebuilt, to swap in the new token
+- name: Install the agent
+  when: pulse_agent_token_new is changed
+  block:
+    - name: Write the token for the installer
+      ansible.builtin.copy:
+        dest: /root/pulse-agent-token
+        content: "{{ pulse_agent_token_new.json.token }}"
+        mode: '0600'
+      no_log: true
+
+    - name: Download the agent installer from the Pulse server
+      ansible.builtin.get_url:
+        url: "{{ pulse_agent_server_url }}/install.sh"
+        dest: /root/pulse-agent-install.sh
+        mode: '0700'
+        force: true
+
+    # The installer turns on Kubernetes monitoring when it finds a kubeconfig, as on pi-control;
+    # the cluster has its own agent (LAB-121)
+    - name: Run the agent installer
+      ansible.builtin.command:
+        cmd: >-
+          bash /root/pulse-agent-install.sh
+          --url {{ pulse_agent_server_url }}
+          --token-file /root/pulse-agent-token
+          --disable-kubernetes
+          --non-interactive
+      changed_when: true
+
+  # The installer keeps its own copy of the token
+  always:
+    - name: Remove the installer's token file
+      ansible.builtin.file:
+        path: /root/pulse-agent-token
+        state: absent

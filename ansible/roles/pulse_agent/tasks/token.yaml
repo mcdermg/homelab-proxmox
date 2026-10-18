@@ -1,0 +1,46 @@
+---
+# roles/pulse_agent/tasks/token.yaml
+# Pulse generates agent tokens and shows them once, so a token is only created when one side lacks it.
+# Needs pulse_agent_installed: whether the agent side (installed agent or k8s Secret) already holds its token.
+# Sets pulse_agent_token_new; it's changed when there's a new token to hand to the agent
+- name: List the Pulse API tokens
+  ansible.builtin.uri:
+    url: "{{ pulse_agent_server_url }}/api/security/tokens"
+    headers:
+      X-API-Token: "{{ pulse_agent_api_token }}"
+    return_content: true
+  register: pulse_agent_tokens
+  no_log: true
+
+# The agent side was rebuilt, so its old token is dead weight
+- name: Revoke the agent's old token
+  ansible.builtin.uri:
+    url: "{{ pulse_agent_server_url }}/api/security/tokens/{{ pulse_agent_token_current.id }}"
+    method: DELETE
+    headers:
+      X-API-Token: "{{ pulse_agent_api_token }}"
+    status_code: [200, 204, 404]
+  vars:
+    pulse_agent_token_current: "{{ pulse_agent_tokens.json.tokens | selectattr('name', 'equalto', pulse_agent_token_name) | first | default({}) }}"
+  changed_when: true
+  no_log: true
+  when: pulse_agent_token_current | length > 0 and not pulse_agent_installed
+
+# Pulse was rebuilt (no token by this name) or the agent side was (old token revoked above)
+- name: Create the agent's token
+  ansible.builtin.uri:
+    url: "{{ pulse_agent_server_url }}/api/security/tokens"
+    method: POST
+    headers:
+      X-API-Token: "{{ pulse_agent_api_token }}"
+    body_format: json
+    body:
+      name: "{{ pulse_agent_token_name }}"
+      scopes: "{{ pulse_agent_token_scopes }}"
+    status_code: [200, 201]
+  vars:
+    pulse_agent_token_current: "{{ pulse_agent_tokens.json.tokens | selectattr('name', 'equalto', pulse_agent_token_name) | first | default({}) }}"
+  register: pulse_agent_token_new
+  changed_when: true
+  no_log: true
+  when: pulse_agent_token_current | length == 0 or not pulse_agent_installed
