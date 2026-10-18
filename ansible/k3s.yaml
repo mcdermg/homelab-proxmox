@@ -81,3 +81,34 @@
         cmd: k3s kubectl -n pulse rollout restart deployment/pulse-agent
       changed_when: true
       when: pulse_agent_token_new is changed and pulse_agent_secret.rc == 0
+
+# The k3s Alertmanager (homelab-argocd-config, LAB-124) reads the Slack webhook from this Secret,
+# which stays out of the public repo. Alertmanager rereads the file, so a new URL needs no restart
+- name: Give the k3s Alertmanager the Slack webhook
+  hosts: server[0]
+  gather_facts: false
+  become: true
+  tags: monitoring
+  tasks:
+    - name: Read the webhook in the Alertmanager Secret
+      ansible.builtin.command:
+        cmd: k3s kubectl -n monitoring get secret alertmanager-slack -o jsonpath={.data.url}
+      register: alertmanager_slack_secret
+      changed_when: false
+      failed_when: alertmanager_slack_secret.rc not in [0, 1]
+      no_log: true
+
+    # Through stdin, so the webhook never reaches the command line
+    - name: Write the webhook to the Alertmanager Secret
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          k3s kubectl create namespace monitoring --dry-run=client -o yaml | k3s kubectl apply -f -
+          k3s kubectl -n monitoring create secret generic alertmanager-slack --from-file=url=/dev/stdin \
+            --dry-run=client -o yaml | k3s kubectl apply --server-side -f -
+        executable: /bin/bash
+        stdin: "{{ slack_alerting_webhook }}"
+        stdin_add_newline: false
+      changed_when: true
+      no_log: true
+      when: alertmanager_slack_secret.stdout | b64decode != slack_alerting_webhook

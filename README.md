@@ -40,12 +40,12 @@ ansible-playbook update.yaml --limit proxmox    # Proxmox nodes only
 ansible-playbook update.yaml --limit k3s_pis    # Raspberry Pis only
 ```
 
-**Monitoring:** plays tagged `monitoring` in `playbook.yaml` (Pulse, node_exporter on the Proxmox nodes, the Pulse agent on the Pis) and `k3s.yaml` (the token Secret for the cluster's Pulse agent)
+**Monitoring:** plays tagged `monitoring` in `playbook.yaml` (Pulse, node_exporter on the Proxmox nodes, the Pulse agent on the Pis) and `k3s.yaml` (Secrets for the cluster's Pulse agent token and the k3s Alertmanager's Slack webhook)
 - The `pulse_agent` role creates each agent's Pulse token through the Pulse API and hands it straight to the agent; nothing is stored in tfvars. A rerun replaces the token on whichever side was rebuilt
 
 ```bash
 ansible-playbook playbook.yaml --tags monitoring    # Only the monitoring plays
-ansible-playbook k3s.yaml --tags monitoring         # Only the agent Secret; skips the k3s install
+ansible-playbook k3s.yaml --tags monitoring         # Only the two Secrets; skips the k3s install
 ```
 
 **k3s Cluster:** `ansible/k3s.yaml`
