@@ -1,0 +1,10 @@
+---
+# roles/pulse_agent/defaults/main.yaml
+# The Pulse server and its admin token come from the pulse_host entry in hosts.ini
+pulse_agent_server_url: "http://{{ hostvars[groups['pulse_host'][0]].ansible_host }}:7655"
+pulse_agent_api_token: "{{ hostvars[groups['pulse_host'][0]].pulse_api_token }}"
+
+# Pulse binds each token to one agent, so every host gets its own
+pulse_agent_token_name: "agent-{{ inventory_hostname }}"
+pulse_agent_token_scopes:
+  - agent:report
