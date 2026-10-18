@@ -11,3 +11,50 @@ pulse_connection_name: homelab
 # Slack alerts; the webhook URL comes from tfvars through hosts.ini
 pulse_slack_webhook_name: Slack
 pulse_slack_minimum_severity: warning # all, warning or critical
+
+# Alert thresholds (LAB-126), merged into Pulse's alert config by the role. Field names are Pulse's
+# API (v6.5.0 internal/alerts/config/types.go); trigger/clear are percent or °C. Overlap with the
+# k3s Alertmanager and Gatus is intended (LAB-122)
+pulse_alert_config:
+  enabled: true
+  nodeDefaults:
+    cpu: {trigger: 80, clear: 75}
+    memory: {trigger: 85, clear: 80}
+    disk: {trigger: 90, clear: 85}
+    temperature: {trigger: 80, clear: 75}
+  agentDefaults:
+    cpu: {trigger: 80, clear: 75}
+    memory: {trigger: 85, clear: 80}
+    disk: {trigger: 90, clear: 85}
+    diskTemperature: {trigger: 55, clear: 50}
+    smartHealthFailure: 1
+    smartReallocated: 1
+    smartPending: 1
+    smartUncorrectable: 1
+    smartMediaErrors: 1
+    smartCrcErrorDelta: 1
+    smartLifeWarning: 10
+    smartLifeCritical: 5
+    smartSpareWarning: 20
+    smartSpareCritical: 10
+  guestDefaults:
+    poweredOffSeverity: warning
+    cpu: {trigger: 80, clear: 75}
+    memory: {trigger: 85, clear: 80}
+    disk: {trigger: 90, clear: 85}
+  kubernetesDefaults:
+    cpu: {trigger: 80, clear: 75}
+    memory: {trigger: 85, clear: 80}
+    disk: {trigger: 90, clear: 85}
+  storageDefault: {trigger: 85, clear: 80}
+  # No Proxmox backup jobs yet; turning this on would alert on every guest
+  backupDefaults:
+    enabled: false
+  disableAllNodes: false
+  disableAllGuests: false
+  disableAllAgents: false
+  disableAllStorage: false
+  disableAllKubernetes: false
+  disableAllNodesOffline: false
+  disableAllGuestsOffline: false
+  disableAllAgentsOffline: false

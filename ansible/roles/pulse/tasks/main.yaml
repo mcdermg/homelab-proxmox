@@ -198,6 +198,33 @@
     or pulse_slack_current.url != slack_alerting_webhook
     or pulse_slack_current.minimumSeverity | default('') != pulse_slack_minimum_severity
 
+# ALERT THRESHOLDS
+# PUT replaces the whole config (fields left out are reset), so read it, merge pulse_alert_config in, and
+# send it back only when the merge changes something
+- name: Read the Pulse alert config
+  ansible.builtin.uri:
+    url: "{{ pulse_api_url }}/api/alerts/config"
+    headers:
+      X-API-Token: "{{ pulse_api_token }}"
+    return_content: true
+  register: pulse_alerts_current
+  no_log: true
+
+- name: Set the Pulse alert thresholds
+  ansible.builtin.uri:
+    url: "{{ pulse_api_url }}/api/alerts/config"
+    method: PUT
+    headers:
+      X-API-Token: "{{ pulse_api_token }}"
+    body_format: json
+    body: "{{ pulse_alerts_wanted }}"
+    status_code: [200, 204]
+  vars:
+    pulse_alerts_wanted: "{{ pulse_alerts_current.json | combine(pulse_alert_config, recursive=true) }}"
+  changed_when: true
+  no_log: true
+  when: pulse_alerts_wanted != pulse_alerts_current.json
+
 # A new install detects alerts but holds delivery until it's turned on; Pulse answers
 # "Alerts already activated" once it is. Turning it on sends the open critical alerts straight away
 - name: Turn on alert delivery

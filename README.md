@@ -6,7 +6,7 @@ OpenTofu + Ansible configuration for Proxmox VE homelab infrastructure including
 
 **LXC Containers (TurnKey Linux, except the plain Debian 13 ones):**
 - LibreSpeed (CT 111) - Speed test (`librespeed/speedtest-rust`), Debian 13
-- Pulse (CT 112) - Proxmox cluster monitoring, Debian 13. Login: `admin` / `pulse_admin_password` from `terraform.tfvars`. Alerts (warning and up) go to Slack via `slack_alerting_webhook`
+- Pulse (CT 112) - Proxmox cluster monitoring, Debian 13. Login: `admin` / `pulse_admin_password` from `terraform.tfvars`. Alerts (warning and up) go to Slack via `slack_alerting_webhook`; thresholds are set by the role from `pulse_alert_config`
 - Cloudflared (CT 113) - Cloudflare Tunnel client
 - Bind9 (CT 115) - DNS server
 - Postgres (CT 116) - Database server
