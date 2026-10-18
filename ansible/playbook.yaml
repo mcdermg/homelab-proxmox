@@ -57,12 +57,9 @@
         that:
           - postgres_ctid is defined
           - gitea_ctid is defined
-          - bind9_ctid is defined
-          - cloudflared_ctid is defined
           - postgres_ip is defined
           - gitea_ip is defined
-          - bind9_ip is defined
-          - cloudflared_ip is defined
+          - bind9_ips is defined
           - cloudflare_tunnel_id is defined
           - cloudflare_tunnel_token is defined
         fail_msg: "Required container variables not defined in inventory"

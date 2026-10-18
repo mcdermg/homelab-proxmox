@@ -22,11 +22,25 @@ ${lxc_nodes.postgres}
 [gitea_node]
 ${lxc_nodes.gitea}
 
+# bind9 and cloudflared have a container on each node, so each container gets its own entry for its node
 [bind9_node]
-${lxc_nodes.bind9}
+%{ for key, ct in bind9_containers ~}
+${lxc_nodes[key]}-ct${ct.vm_id} ansible_host=${proxmox_nodes[lxc_nodes[key]].address} bind9_ctid=${ct.vm_id} bind9_ip=${ct.ip_address}
+%{ endfor ~}
 
 [cloudflared_node]
-${lxc_nodes.cloudflared}
+%{ for key, ct in cloudflared_containers ~}
+${lxc_nodes[key]}-ct${ct.vm_id} ansible_host=${proxmox_nodes[lxc_nodes[key]].address} cloudflared_ctid=${ct.vm_id} cloudflared_ip=${ct.ip_address}
+%{ endfor ~}
+
+# Same SSH login as [proxmox:vars]
+[pct_container_nodes:children]
+bind9_node
+cloudflared_node
+
+[pct_container_nodes:vars]
+ansible_user=${proxmox_ssh_user}
+ansible_port=${proxmox_ssh_port}
 
 # Shared variables available to all hosts
 [all:vars]
@@ -37,12 +51,8 @@ postgres_ip=${postgres_ip}
 gitea_ctid=${gitea_ctid}
 gitea_ip=${gitea_ip}
 
-bind9_ctid=${bind9_ctid}
-bind9_ip=${bind9_ip}
 bind9_records=${bind9_records}
-
-cloudflared_ctid=${cloudflared_ctid}
-cloudflared_ip=${cloudflared_ip}
+bind9_ips=${bind9_ips}
 
 # Cloudflare Tunnel
 cloudflare_tunnel_id=${cloudflare_tunnel_id}
@@ -57,7 +67,9 @@ lxc_ssh_public_key=${lxc_ssh_public_key}
 
 # Direct container access for post-configuration
 [cloudflared_host]
-cloudflared ansible_host=${cloudflared_ip}
+%{ for key, ct in cloudflared_containers ~}
+${ct.name} ansible_host=${ct.ip_address}
+%{ endfor ~}
 
 [cloudflared_host:vars]
 ansible_user=root
@@ -65,10 +77,14 @@ ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/
 
 # LXC Containers - Direct access for system updates
 [lxc_containers]
-bind9 ansible_host=${bind9_ip}
+%{ for key, ct in bind9_containers ~}
+${ct.name} ansible_host=${ct.ip_address}
+%{ endfor ~}
 postgres ansible_host=${postgres_ip}
 gitea ansible_host=${gitea_ip}
-cloudflared_update ansible_host=${cloudflared_ip}
+%{ for key, ct in cloudflared_containers ~}
+${ct.name}_update ansible_host=${ct.ip_address}
+%{ endfor ~}
 
 [lxc_containers:children]
 ssh_containers

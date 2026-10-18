@@ -30,6 +30,10 @@ locals {
     { for key, vm in local.k3s_vms : vm.name => vm.ip_address },
     { "pi-control" = var.k3s_pi_01_ip, "pi-worker" = var.k3s_pi_02_ip },
   )
+
+  # bind9 and cloudflared have a container on each node (LAB-115, LAB-116), keyed bind9, bind9_02 and so on
+  bind9_containers       = { for key, ct in var.lxc_containers : key => ct if startswith(key, "bind9") }
+  cloudflared_containers = { for key, ct in var.lxc_containers : key => ct if startswith(key, "cloudflared") }
 }
 
 # PROXMOX NODES
@@ -255,18 +259,17 @@ resource "local_file" "ansible_hosts_file" {
     proxmox_ssh_port = var.proxmox.ssh_port
 
     # Container details for pct operations
-    lxc_nodes        = { for key, ct in var.lxc_containers : key => coalesce(ct.node_name, var.proxmox.node) }
-    postgres_ctid    = var.lxc_containers.postgres.vm_id
-    postgres_ip      = var.lxc_containers.postgres.ip_address
-    gitea_ctid       = var.lxc_containers.gitea.vm_id
-    gitea_ip         = var.lxc_containers.gitea.ip_address
-    bind9_ctid       = var.lxc_containers.bind9.vm_id
-    bind9_ip         = var.lxc_containers.bind9.ip_address
-    cloudflared_ctid = var.lxc_containers.cloudflared.vm_id
-    cloudflared_ip   = var.lxc_containers.cloudflared.ip_address
+    lxc_nodes              = { for key, ct in var.lxc_containers : key => coalesce(ct.node_name, var.proxmox.node) }
+    postgres_ctid          = var.lxc_containers.postgres.vm_id
+    postgres_ip            = var.lxc_containers.postgres.ip_address
+    gitea_ctid             = var.lxc_containers.gitea.vm_id
+    gitea_ip               = var.lxc_containers.gitea.ip_address
+    bind9_containers       = local.bind9_containers
+    cloudflared_containers = local.cloudflared_containers
 
-    # Internal DNS records for the bind9 zones, as JSON (Ansible reads it as a dict)
+    # Internal DNS records and the bind9 servers' IPs (the zones' name servers), as JSON (Ansible reads them as a dict and a list)
     bind9_records = jsonencode(local.bind9_records)
+    bind9_ips     = jsonencode([for ct in values(local.bind9_containers) : ct.ip_address])
 
     # Containers configured over SSH
     librespeed_ip = var.lxc_containers.librespeed.ip_address

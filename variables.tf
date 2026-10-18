@@ -414,6 +414,24 @@ variable "lxc_containers" {
       }
       tags = ["turnkey"]
     }
+    # Replica of the same tunnel on the other node, so the tunnel stays up with one node down (LAB-115)
+    cloudflared_02 = {
+      vm_id            = 118
+      name             = "cloudflared-02"
+      template_file_id = "debian-12-turnkey-core_18.1-1_amd64.tar.gz"
+      os_type          = "debian"
+      cores            = 1
+      memory           = 512
+      disk_size        = 8
+      swap             = 256
+      node_name        = "pve01"
+      ip_address       = "192.168.1.118"
+      started          = false
+      features = {
+        nesting = true # systemd 252 in an unprivileged container needs it
+      }
+      tags = ["turnkey"]
+    }
     # Can't remember what Caddy was in the lab for in the first place; it was never configured (LAB-54).
     # Git history (c3bc103) suggests an internal reverse proxy for *.lab names. Commented out until there's a use for it.
     #caddy = {
@@ -444,6 +462,24 @@ variable "lxc_containers" {
       swap             = 512
       node_name        = "pve02"
       ip_address       = "192.168.1.115"
+      started          = false
+      features = {
+        nesting = true
+      }
+      tags = ["turnkey"]
+    }
+    # Second server with the same zones on the other node (LAB-116)
+    bind9_02 = {
+      vm_id            = 119
+      name             = "bind9-02"
+      template_file_id = "debian-12-turnkey-core_18.1-1_amd64.tar.gz"
+      os_type          = "debian"
+      cores            = 2
+      memory           = 512
+      disk_size        = 10
+      swap             = 512
+      node_name        = "pve01"
+      ip_address       = "192.168.1.119"
       started          = false
       features = {
         nesting = true
