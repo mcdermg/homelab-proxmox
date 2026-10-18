@@ -8,7 +8,9 @@
 # 5. Starting container (handlers)
 
 # NVMe and PCIe power saving off (LAB-113): pve01's NVMe dropped off PCIe on 2026-10-14.
-# ASPM isn't set: the firmware (FADT) tells Linux it can't manage ASPM, so the BIOS value stays.
+# ASPM (LAB-132): it dropped again on 2026-10-18 with ASPM L1 and its L1.1/L1.2 substates still on. The firmware
+# (FADT) keeps ASPM, so the kernel would leave the BIOS value, and pve01's BIOS has no option for it. Secure Boot's
+# lockdown blocks setpci, so pcie_aspm=force makes the kernel take ASPM over and the performance policy turns it off.
 # Takes effect after a reboot, which is left to be done by hand, one node at a time
 - name: Turn off NVMe and PCIe power saving on the Proxmox nodes
   hosts: proxmox
@@ -21,7 +23,7 @@
         dest: /etc/default/grub.d/nvme-power.cfg
         content: |
           # Managed by Ansible (homelab-proxmox playbook.yaml)
-          GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT nvme_core.default_ps_max_latency_us=0 pcie_port_pm=off"
+          GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT nvme_core.default_ps_max_latency_us=0 pcie_port_pm=off pcie_aspm=force pcie_aspm.policy=performance"
         mode: '0644'
       notify: Update GRUB
 
