@@ -131,6 +131,10 @@ resource "cloudflare_zero_trust_organization" "homelab" {
     session_duration       = var.cloudflare_access.mfa_session_duration
   }
   mfa_required_for_all_apps = true
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Log in with the Cloudflare account; only members of this account can authenticate
