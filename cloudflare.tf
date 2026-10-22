@@ -278,12 +278,14 @@ resource "cloudflare_zero_trust_device_custom_profile" "lab_access" {
 resource "cloudflare_zero_trust_dns_location" "home" {
   account_id = var.cloudflare_account_id
   name       = "Home"
+  networks   = []
   # DoH only: the IPv4 and IPv6 endpoints need a fixed source IP, which the ISP doesn't give
+  # networks = [] and require_token set explicitly: the provider errors on unknown values there (5.27)
   endpoints = {
-    doh  = { enabled = true }
-    dot  = { enabled = false }
+    doh  = { enabled = true, networks = [], require_token = false }
+    dot  = { enabled = false, networks = [] }
     ipv4 = { enabled = false }
-    ipv6 = { enabled = false }
+    ipv6 = { enabled = false, networks = [] }
   }
 }
 
