@@ -23,10 +23,11 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.6"
     }
-    http = {
-      source  = "hashicorp/http"
-      version = "~> 3.0"
-    }
+    # LAB-133: only the commented-out IP allowlist fallback in cloudflare.tf uses it
+    # http = {
+    #   source  = "hashicorp/http"
+    #   version = "~> 3.0"
+    # }
   }
 }
 
