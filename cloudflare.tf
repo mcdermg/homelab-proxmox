@@ -245,6 +245,19 @@ resource "cloudflare_zero_trust_access_application" "device_enrollment" {
   }]
 }
 
+# App Launcher (<team>.cloudflareaccess.com): where MFA devices are enrolled; off until it has a policy
+resource "cloudflare_zero_trust_access_application" "app_launcher" {
+  account_id                = var.cloudflare_account_id
+  type                      = "app_launcher"
+  allowed_idps              = [cloudflare_zero_trust_access_identity_provider.cloudflare.id]
+  auto_redirect_to_identity = true
+
+  policies = [{
+    id         = cloudflare_zero_trust_access_policy.approved_account.id
+    precedence = 1
+  }]
+}
+
 # Client profile for the approved account: send the lab subnet through Cloudflare
 resource "cloudflare_zero_trust_device_custom_profile" "lab_access" {
   account_id      = var.cloudflare_account_id

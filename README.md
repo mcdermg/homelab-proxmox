@@ -227,7 +227,7 @@ Check that the org in the plan only changes `mfa_config` and `mfa_required_for_a
 tf import 'cloudflare_zero_trust_access_identity_provider.cloudflare' 'accounts/<cloudflare_account_id>/<identity_provider_id>'
 ```
 
-After the apply, open any protected hostname, log in with the Cloudflare account, and follow the link to enrol MFA (or go to `<team>.cloudflareaccess.com/AddMfaDevice`). Enrol the YubiKey and the authenticator app. Only one authenticator app can be enrolled at a time.
+After the apply, open any protected hostname, log in with the Cloudflare account, and follow the link to enrol MFA (or go to `<team>.cloudflareaccess.com/AddMfaDevice`). Enrol the YubiKey and the authenticator app. Only one authenticator app can be enrolled at a time. Enrolment happens in the App Launcher, which stays off until it has a policy, so `cloudflare_zero_trust_access_application.app_launcher` gives it the approved-account policy; without it the link shows "contact your administrator to enable the Access App Launcher".
 
 ### Off-LAN access (Cloudflare One client)
 
@@ -334,6 +334,7 @@ tofu init
 
 | Name | Type |
 | ---- | ---- |
+| [cloudflare_zero_trust_access_application.app_launcher](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_application) | resource |
 | [cloudflare_zero_trust_access_application.device_enrollment](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_application) | resource |
 | [cloudflare_zero_trust_access_application.tunnel_services](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_application) | resource |
 | [cloudflare_zero_trust_access_identity_provider.cloudflare](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_identity_provider) | resource |
