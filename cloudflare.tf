@@ -55,6 +55,20 @@ locals {
   # public_services = toset(["gatus"])
   public_services = toset([])
 
+  # Lab subnet (192.168.1.0/24) routed to the Cloudflare One client
+  lab_cidr = "${cidrhost("${var.network.gateway}${var.network.cidr_suffix}", 0)}${var.network.cidr_suffix}"
+
+  # Cloudflare's default client exclude list, with 192.168.0.0/16 replaced by everything in it except the lab /24
+  client_split_tunnel_exclude = [
+    for address in [
+      "ff05::/16", "ff04::/16", "ff03::/16", "ff02::/16", "ff01::/16", "fe80::/10", "fd00::/8",
+      "255.255.255.255/32", "240.0.0.0/4", "224.0.0.0/24", "192.0.0.0/24", "172.16.0.0/12",
+      "169.254.0.0/16", "100.64.0.0/10", "10.0.0.0/8",
+      "192.168.0.0/24", "192.168.2.0/23", "192.168.4.0/22", "192.168.8.0/21",
+      "192.168.16.0/20", "192.168.32.0/19", "192.168.64.0/18", "192.168.128.0/17",
+    ] : { address = address }
+  ]
+
   # LAB-133: IP allowlist fallback, see the data sources at the top
   # ipv4_addr = chomp(data.http.my_ipv4.response_body)
   # ipv6_addr = chomp(data.http.my_ipv6.response_body)
@@ -147,6 +161,23 @@ resource "cloudflare_zero_trust_access_identity_provider" "cloudflare" {
   }
 }
 
+# The approved account, logged in through the Cloudflare login; used by every app below
+resource "cloudflare_zero_trust_access_policy" "approved_account" {
+  account_id = var.cloudflare_account_id
+  name       = "Allow approved account"
+  decision   = "allow"
+  include = [{
+    email = {
+      email = var.cloudflare_access.allowed_email
+    }
+  }]
+  require = [{
+    login_method = {
+      id = cloudflare_zero_trust_access_identity_provider.cloudflare.id
+    }
+  }]
+}
+
 resource "cloudflare_zero_trust_access_application" "tunnel_services" {
   for_each = { for k, v in local.tunnel_services : k => v if !contains(local.public_services, k) }
 
@@ -161,18 +192,8 @@ resource "cloudflare_zero_trust_access_application" "tunnel_services" {
   auto_redirect_to_identity = true
 
   policies = [{
-    name     = "Allow approved account"
-    decision = "allow"
-    include = [{
-      email = {
-        email = var.cloudflare_access.allowed_email
-      }
-    }]
-    require = [{
-      login_method = {
-        id = cloudflare_zero_trust_access_identity_provider.cloudflare.id
-      }
-    }]
+    id         = cloudflare_zero_trust_access_policy.approved_account.id
+    precedence = 1
   }]
 
   # LAB-133: IP allowlist fallback, see the data sources at the top
@@ -187,4 +208,39 @@ resource "cloudflare_zero_trust_access_application" "tunnel_services" {
   #     }
   #   ]
   # }]
+}
+
+# PRIVATE NETWORK (CLOUDFLARE ONE CLIENT)
+# Lets an enrolled laptop reach the lab subnet (Proxmox API, SSH) through the tunnel from off the LAN.
+# Bootstrap off-LAN with a targeted apply (see README, Cloudflare Access).
+resource "cloudflare_zero_trust_tunnel_cloudflared_route" "lab" {
+  account_id = var.cloudflare_account_id
+  tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.homelab.id
+  network    = local.lab_cidr
+  comment    = "Lab subnet for the Cloudflare One client"
+}
+
+# Only the approved account can enrol a device
+resource "cloudflare_zero_trust_access_application" "device_enrollment" {
+  account_id                = var.cloudflare_account_id
+  type                      = "warp"
+  name                      = "Device enrollment"
+  allowed_idps              = [cloudflare_zero_trust_access_identity_provider.cloudflare.id]
+  auto_redirect_to_identity = true
+
+  policies = [{
+    id         = cloudflare_zero_trust_access_policy.approved_account.id
+    precedence = 1
+  }]
+}
+
+# Client profile for the approved account: send the lab subnet through Cloudflare
+resource "cloudflare_zero_trust_device_custom_profile" "lab_access" {
+  account_id      = var.cloudflare_account_id
+  name            = "Lab access"
+  enabled         = true
+  precedence      = 100
+  match           = "identity.email == \"${var.cloudflare_access.allowed_email}\""
+  service_mode_v2 = { mode = "warp" }
+  exclude         = local.client_split_tunnel_exclude
 }

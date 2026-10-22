@@ -210,11 +210,11 @@ cloudflare_access = {
 }
 ```
 
-`cloudflare_api_token` also needs `Access: Organizations, Identity Providers, and Groups Write`.
+`cloudflare_api_token` also needs `Access: Organizations, Identity Providers, and Groups Write`, and `Zero Trust Write` for the client profile (see Off-LAN access).
 
 ### First apply and rebuilds
 
-The Zero Trust org belongs to the Cloudflare account, so it exists before OpenTofu does and can't be destroyed from it. With empty state, import it first:
+The Zero Trust org belongs to the Cloudflare account, so it exists before OpenTofu does and can't be destroyed from it. With empty state, import it first. The import reads the whole config, Proxmox included, so run it on the LAN or with the Cloudflare One client connected (see Off-LAN access):
 
 ```bash
 tf import 'cloudflare_zero_trust_organization.homelab' '<cloudflare_account_id>'
@@ -228,6 +228,36 @@ tf import 'cloudflare_zero_trust_access_identity_provider.cloudflare' 'accounts/
 ```
 
 After the apply, open any protected hostname, log in with the Cloudflare account, and follow the link to enrol MFA (or go to `<team>.cloudflareaccess.com/AddMfaDevice`). Enrol the YubiKey and the authenticator app. Only one authenticator app can be enrolled at a time.
+
+### Off-LAN access (Cloudflare One client)
+
+The lab is behind double NAT, so there's no inbound VPN. Instead the tunnel also carries the lab subnet (`local.lab_cidr`, 192.168.1.0/24) to an enrolled laptop running the Cloudflare One client. The Proxmox API, SSH, `tf` and Ansible then work from anywhere. `cloudflare.tf` manages:
+
+- `cloudflare_zero_trust_tunnel_cloudflared_route.lab`: the subnet route on `homelab-tunnel`. Both cloudflared replicas serve it, so it's down only if both are.
+- `cloudflare_zero_trust_access_application.device_enrollment`: only `allowed_email` can enrol a device.
+- `cloudflare_zero_trust_device_custom_profile.lab_access`: for that email, Cloudflare's default exclude list without `192.168.0.0/16`, so the lab /24 goes through the client and the rest of 192.168.x stays local.
+
+The API token also needs `Zero Trust Write` (Account > Zero Trust > Edit) for the device profile.
+
+These resources don't depend on Proxmox, so the first apply can run off-LAN as a targeted apply:
+
+```bash
+tf apply \
+  -target='cloudflare_zero_trust_tunnel_cloudflared_route.lab' \
+  -target='cloudflare_zero_trust_access_application.device_enrollment' \
+  -target='cloudflare_zero_trust_device_custom_profile.lab_access'
+```
+
+That also creates the Cloudflare login and the approved-account policy they depend on. Then on the laptop (Arch: `cloudflare-warp-bin` from the AUR, an unofficial repackage; Cloudflare only ships Debian, Ubuntu, RHEL and Fedora packages):
+
+```bash
+sudo systemctl enable --now warp-svc
+warp-cli registration new <team_name>   # opens the Cloudflare login
+warp-cli connect
+curl -k https://192.168.1.250:8006      # Proxmox answers
+```
+
+At home, `warp-cli disconnect`: otherwise lab traffic goes out to Cloudflare and back instead of across the LAN.
 
 ### Day to day
 
@@ -304,11 +334,15 @@ tofu init
 
 | Name | Type |
 | ---- | ---- |
+| [cloudflare_zero_trust_access_application.device_enrollment](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_application) | resource |
 | [cloudflare_zero_trust_access_application.tunnel_services](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_application) | resource |
 | [cloudflare_zero_trust_access_identity_provider.cloudflare](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_identity_provider) | resource |
+| [cloudflare_zero_trust_access_policy.approved_account](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_policy) | resource |
+| [cloudflare_zero_trust_device_custom_profile.lab_access](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_device_custom_profile) | resource |
 | [cloudflare_zero_trust_organization.homelab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_organization) | resource |
 | [cloudflare_zero_trust_tunnel_cloudflared.homelab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_tunnel_cloudflared) | resource |
 | [cloudflare_zero_trust_tunnel_cloudflared_config.homelab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_tunnel_cloudflared_config) | resource |
+| [cloudflare_zero_trust_tunnel_cloudflared_route.lab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_tunnel_cloudflared_route) | resource |
 | [local_file.ansible_hosts_file](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file) | resource |
 | [proxmox_acl.pulse_token](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/acl) | resource |
 | [proxmox_acl.pulse_user](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/acl) | resource |
