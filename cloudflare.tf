@@ -230,7 +230,7 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_route" "lab" {
 resource "cloudflare_zero_trust_access_application" "device_enrollment" {
   account_id                = var.cloudflare_account_id
   type                      = "warp"
-  name                      = "Device enrollment"
+  name                      = "Warp Login App" # Cloudflare's name for the account's single enrolment app
   allowed_idps              = [cloudflare_zero_trust_access_identity_provider.cloudflare.id]
   auto_redirect_to_identity = true
 
