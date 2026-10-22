@@ -555,6 +555,18 @@ variable "cloudflare_zone" {
   type        = string
 }
 
+variable "cloudflare_access" {
+  description = "Cloudflare Access login for the tunnel hostnames: Zero Trust org, the one approved email, and app and MFA session lengths"
+  type = object({
+    org_name             = string # Zero Trust organization name, as shown in the dashboard
+    team_name            = string # <team_name>.cloudflareaccess.com
+    allowed_email        = string # Cloudflare account email allowed through Access
+    session_duration     = optional(string, "24h")
+    mfa_session_duration = optional(string, "168h")
+    mfa_authenticators   = optional(list(string), ["security_key", "totp"])
+  })
+}
+
 # TODO is locals doing all this work? Should move to tfvars?
 #variable "cloudflare_tunnel_services" {
 #  description = "Map of services to expose via Cloudflare Tunnel"

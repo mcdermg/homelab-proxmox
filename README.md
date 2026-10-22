@@ -217,7 +217,6 @@ tofu init
 | Name | Version |
 | ---- | ------- |
 | <a name="requirement_cloudflare"></a> [cloudflare](#requirement\_cloudflare) | ~> 5.27 |
-| <a name="requirement_http"></a> [http](#requirement\_http) | ~> 3.0 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | ~> 2.5 |
 | <a name="requirement_proxmox"></a> [proxmox](#requirement\_proxmox) | ~> 0.116 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | ~> 3.6 |
@@ -227,7 +226,6 @@ tofu init
 | Name | Version |
 | ---- | ------- |
 | <a name="provider_cloudflare"></a> [cloudflare](#provider\_cloudflare) | 5.27.0 |
-| <a name="provider_http"></a> [http](#provider\_http) | 3.6.2 |
 | <a name="provider_local"></a> [local](#provider\_local) | 2.9.1 |
 | <a name="provider_proxmox"></a> [proxmox](#provider\_proxmox) | 0.116.0 |
 | <a name="provider_random"></a> [random](#provider\_random) | 3.9.1 |
@@ -249,6 +247,8 @@ tofu init
 | Name | Type |
 | ---- | ---- |
 | [cloudflare_zero_trust_access_application.tunnel_services](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_application) | resource |
+| [cloudflare_zero_trust_access_identity_provider.cloudflare](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_identity_provider) | resource |
+| [cloudflare_zero_trust_organization.homelab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_organization) | resource |
 | [cloudflare_zero_trust_tunnel_cloudflared.homelab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_tunnel_cloudflared) | resource |
 | [cloudflare_zero_trust_tunnel_cloudflared_config.homelab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_tunnel_cloudflared_config) | resource |
 | [local_file.ansible_hosts_file](https://registry.terraform.io/providers/hashicorp/local/latest/docs/resources/file) | resource |
@@ -262,8 +262,6 @@ tofu init
 | [random_id.cloudflared_tunnel_secret](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/id) | resource |
 | [random_password.pulse_api_token](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
 | [cloudflare_zero_trust_tunnel_cloudflared_token.homelab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/data-sources/zero_trust_tunnel_cloudflared_token) | data source |
-| [http_http.my_ipv4](https://registry.terraform.io/providers/hashicorp/http/latest/docs/data-sources/http) | data source |
-| [http_http.my_ipv6](https://registry.terraform.io/providers/hashicorp/http/latest/docs/data-sources/http) | data source |
 
 ## Inputs
 
@@ -271,6 +269,7 @@ tofu init
 | ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_apt_repositories"></a> [apt\_repositories](#input\_apt\_repositories) | APT standard repository handles to enable or disable on every Proxmox node | <pre>object({<br/>    enabled  = list(string)<br/>    disabled = list(string)<br/>  })</pre> | <pre>{<br/>  "disabled": [<br/>    "enterprise",<br/>    "ceph-squid-enterprise"<br/>  ],<br/>  "enabled": [<br/>    "no-subscription"<br/>  ]<br/>}</pre> | no |
 | <a name="input_bind9_vip"></a> [bind9\_vip](#input\_bind9\_vip) | Floating DNS IP that keepalived moves to whichever bind9 container is up (LAB-117). The MikroTik forwards homelab.local to it, so keep mikrotik-hapac2's internal\_dns.servers in step. Not a VMID, so no LXC may use it | `string` | `"192.168.1.153"` | no |
+| <a name="input_cloudflare_access"></a> [cloudflare\_access](#input\_cloudflare\_access) | Cloudflare Access login for the tunnel hostnames: Zero Trust org, the one approved email, and app and MFA session lengths | <pre>object({<br/>    org_name             = string # Zero Trust organization name, as shown in the dashboard<br/>    team_name            = string # <team_name>.cloudflareaccess.com<br/>    allowed_email        = string # Cloudflare account email allowed through Access<br/>    session_duration     = optional(string, "24h")<br/>    mfa_session_duration = optional(string, "168h")<br/>    mfa_authenticators   = optional(list(string), ["security_key", "totp"])<br/>  })</pre> | n/a | yes |
 | <a name="input_cloudflare_account_id"></a> [cloudflare\_account\_id](#input\_cloudflare\_account\_id) | Cloudflare Account ID for tunnel management | `string` | n/a | yes |
 | <a name="input_cloudflare_api_token"></a> [cloudflare\_api\_token](#input\_cloudflare\_api\_token) | Cloudflare API token for managing DNS and tunnels | `string` | n/a | yes |
 | <a name="input_cloudflare_zone"></a> [cloudflare\_zone](#input\_cloudflare\_zone) | Cloudflare zone/domain name | `string` | n/a | yes |
