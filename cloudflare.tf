@@ -47,6 +47,8 @@ locals {
     { name = "grafana", service = "http://192.168.1.14" },
     { name = "prometheus", service = "http://192.168.1.15" },
     { name = "pve02", service = "https://${var.proxmox_nodes.pve02.address}:8006" },
+    # ISP router admin page, on the house network: cloudflared reaches it through the MikroTik, like Gatus
+    { name = "isp", service = "http://192.168.0.1" },
   ]
   # Derived map for for_each resources (DNS records, access applications) — order irrelevant there
   tunnel_services = { for item in local.tunnel_services_list : item.name => item.service }
@@ -112,6 +114,9 @@ module "tunnel_dns_records" {
 resource "cloudflare_zero_trust_tunnel_cloudflared_config" "homelab" {
   tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.homelab.id
   account_id = var.cloudflare_account_id
+
+  # A new hostname is only routed once its Access app exists, so it's never briefly public
+  depends_on = [cloudflare_zero_trust_access_application.tunnel_services]
 
   config = {
     ingress = concat(
