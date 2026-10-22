@@ -251,6 +251,10 @@ resource "cloudflare_zero_trust_access_application" "app_launcher" {
   type                      = "app_launcher"
   allowed_idps              = [cloudflare_zero_trust_access_identity_provider.cloudflare.id]
   auto_redirect_to_identity = true
+  # Cloudflare's default title, set so the provider's default doesn't show as a diff on every plan
+  landing_page_design = {
+    title = "Welcome!"
+  }
 
   policies = [{
     id         = cloudflare_zero_trust_access_policy.approved_account.id
