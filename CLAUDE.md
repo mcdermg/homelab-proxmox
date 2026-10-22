@@ -257,7 +257,7 @@ Variables are grouped by function using object types:
 - **k3s_pi_01_ip**, **k3s_pi_02_ip**: Raspberry Pi IPs for the generated Ansible inventory
 - **lxc_defaults**, **lxc_containers**: LXC defaults and container specifications (map of objects)
 - **gitea_db_password**, **gitea_admin** (password and email), **postgres_admin_password**, **pulse_admin_password**: app passwords, passed to Ansible only through the generated (gitignored) `ansible/hosts.ini`; letters, digits, `.`, `_`, `-` only
-- **cloudflare_\***: Cloudflare API token, zone and account for the tunnel
+- **cloudflare_\***: Cloudflare API token, zone and account for the tunnel; `cloudflare_access` holds the Access login (Zero Trust org name and team, approved email, app and MFA session lengths)
 
 ### Complex Variable Types
 
