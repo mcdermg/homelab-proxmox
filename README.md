@@ -259,6 +259,16 @@ curl -k https://192.168.1.250:8006      # Proxmox answers
 
 At home, `warp-cli disconnect`: otherwise lab traffic goes out to Cloudflare and back instead of across the LAN.
 
+### Ad blocking (Gateway DNS)
+
+`cloudflare.tf` also blocks ads and known-bad domains in Cloudflare Gateway: one policy for the Ads category (66), one for Cloudflare's security categories. They apply to every query Gateway sees:
+
+- **Enrolled devices** (laptop, phone): automatically, at home or away, while the client is connected.
+- **The lab:** the MikroTik sends its upstream DNS to the `Home` DNS location over DoH. Set `dns_doh_server` in mikrotik-hapac2 to `tf output -raw gateway_doh_url`. `homelab.local` still forwards to bind9.
+- **ISP network devices (`192.168.0.x`):** not covered. They'd need to use the MikroTik for DNS, which depends on the ISP router's DHCP.
+
+A blocked name resolves to `0.0.0.0`. Blocked queries show under Zero Trust > Insights > Logs > Gateway activity.
+
 ### Day to day
 
 - **Log out:** `<hostname>/cdn-cgi/access/logout`, which ends the session on every app.
@@ -340,6 +350,9 @@ tofu init
 | [cloudflare_zero_trust_access_identity_provider.cloudflare](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_identity_provider) | resource |
 | [cloudflare_zero_trust_access_policy.approved_account](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_policy) | resource |
 | [cloudflare_zero_trust_device_custom_profile.lab_access](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_device_custom_profile) | resource |
+| [cloudflare_zero_trust_dns_location.home](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_dns_location) | resource |
+| [cloudflare_zero_trust_gateway_policy.block_ads](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_gateway_policy) | resource |
+| [cloudflare_zero_trust_gateway_policy.block_security_threats](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_gateway_policy) | resource |
 | [cloudflare_zero_trust_organization.homelab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_organization) | resource |
 | [cloudflare_zero_trust_tunnel_cloudflared.homelab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_tunnel_cloudflared) | resource |
 | [cloudflare_zero_trust_tunnel_cloudflared_config.homelab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_tunnel_cloudflared_config) | resource |
@@ -395,4 +408,5 @@ tofu init
 | Name | Description |
 | ---- | ----------- |
 | <a name="output_dns_records"></a> [dns\_records](#output\_dns\_records) | Public hostname of each service behind the Cloudflare tunnel, and the origin the tunnel sends it to |
+| <a name="output_gateway_doh_url"></a> [gateway\_doh\_url](#output\_gateway\_doh\_url) | DoH URL of the Home Gateway DNS location; set as dns\_doh\_server in mikrotik-hapac2 |
 <!-- END_TF_DOCS -->

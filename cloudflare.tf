@@ -272,3 +272,37 @@ resource "cloudflare_zero_trust_device_custom_profile" "lab_access" {
   service_mode_v2 = { mode = "warp" }
   exclude         = local.client_split_tunnel_exclude
 }
+
+# GATEWAY DNS FILTERING
+# Policies apply to every query Gateway sees: the MikroTik over DoH (location below) and enrolled clients anywhere
+resource "cloudflare_zero_trust_dns_location" "home" {
+  account_id = var.cloudflare_account_id
+  name       = "Home"
+  # DoH only: the IPv4 and IPv6 endpoints need a fixed source IP, which the ISP doesn't give
+  endpoints = {
+    doh  = { enabled = true }
+    dot  = { enabled = false }
+    ipv4 = { enabled = false }
+    ipv6 = { enabled = false }
+  }
+}
+
+resource "cloudflare_zero_trust_gateway_policy" "block_security_threats" {
+  account_id  = var.cloudflare_account_id
+  name        = "Block security threats"
+  description = "Cloudflare's security categories (malware, phishing, C2 and so on)"
+  enabled     = true
+  action      = "block"
+  filters     = ["dns"]
+  traffic     = "any(dns.security_category[*] in {68 178 80 83 176 175 117 131 134 151 153})"
+}
+
+resource "cloudflare_zero_trust_gateway_policy" "block_ads" {
+  account_id  = var.cloudflare_account_id
+  name        = "Block ads"
+  description = "Content category 66: Ads > Advertisements"
+  enabled     = true
+  action      = "block"
+  filters     = ["dns"]
+  traffic     = "any(dns.content_category[*] in {66})"
+}
