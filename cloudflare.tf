@@ -51,7 +51,9 @@ locals {
   # Derived map for for_each resources (DNS records, access applications) — order irrelevant there
   tunnel_services = { for item in local.tunnel_services_list : item.name => item.service }
 
-  public_services = toset(["gatus"])
+  # LAB-136: Gatus goes behind the same login as everything else
+  # public_services = toset(["gatus"])
+  public_services = toset([])
 
   # LAB-133: IP allowlist fallback, see the data sources at the top
   # ipv4_addr = chomp(data.http.my_ipv4.response_body)
