@@ -279,6 +279,7 @@ resource "cloudflare_zero_trust_dns_location" "home" {
   account_id = var.cloudflare_account_id
   name       = "Home"
   networks   = []
+  max_ttl    = { mode = "inherit" } # the default; set because the provider errors when it's unknown
   # DoH only: the IPv4 and IPv6 endpoints need a fixed source IP, which the ISP doesn't give
   # networks = [] and require_token set explicitly: the provider errors on unknown values there (5.27)
   endpoints = {
