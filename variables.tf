@@ -563,7 +563,7 @@ variable "cloudflare_access" {
     allowed_email        = string # Cloudflare account email allowed through Access
     session_duration     = optional(string, "24h")
     mfa_session_duration = optional(string, "168h")
-    mfa_authenticators   = optional(list(string), ["security_key", "totp"])
+    mfa_authenticators   = optional(list(string), ["totp", "security_key"]) # Cloudflare's order, otherwise every plan shows a diff
   })
 }
 

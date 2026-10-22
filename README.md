@@ -204,7 +204,7 @@ In `terraform.tfvars`:
 
 ```hcl
 cloudflare_access = {
-  org_name      = "<Zero Trust org name>"
+  org_name      = "<Zero Trust org name>" # `name` in tf state show; here it's the full team domain
   team_name     = "<team>" # <team>.cloudflareaccess.com, under Zero Trust > Settings
   allowed_email = "<your Cloudflare account email>"
 }
@@ -361,7 +361,7 @@ tofu init
 | ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_apt_repositories"></a> [apt\_repositories](#input\_apt\_repositories) | APT standard repository handles to enable or disable on every Proxmox node | <pre>object({<br/>    enabled  = list(string)<br/>    disabled = list(string)<br/>  })</pre> | <pre>{<br/>  "disabled": [<br/>    "enterprise",<br/>    "ceph-squid-enterprise"<br/>  ],<br/>  "enabled": [<br/>    "no-subscription"<br/>  ]<br/>}</pre> | no |
 | <a name="input_bind9_vip"></a> [bind9\_vip](#input\_bind9\_vip) | Floating DNS IP that keepalived moves to whichever bind9 container is up (LAB-117). The MikroTik forwards homelab.local to it, so keep mikrotik-hapac2's internal\_dns.servers in step. Not a VMID, so no LXC may use it | `string` | `"192.168.1.153"` | no |
-| <a name="input_cloudflare_access"></a> [cloudflare\_access](#input\_cloudflare\_access) | Cloudflare Access login for the tunnel hostnames: Zero Trust org, the one approved email, and app and MFA session lengths | <pre>object({<br/>    org_name             = string # Zero Trust organization name, as shown in the dashboard<br/>    team_name            = string # <team_name>.cloudflareaccess.com<br/>    allowed_email        = string # Cloudflare account email allowed through Access<br/>    session_duration     = optional(string, "24h")<br/>    mfa_session_duration = optional(string, "168h")<br/>    mfa_authenticators   = optional(list(string), ["security_key", "totp"])<br/>  })</pre> | n/a | yes |
+| <a name="input_cloudflare_access"></a> [cloudflare\_access](#input\_cloudflare\_access) | Cloudflare Access login for the tunnel hostnames: Zero Trust org, the one approved email, and app and MFA session lengths | <pre>object({<br/>    org_name             = string # Zero Trust organization name, as shown in the dashboard<br/>    team_name            = string # <team_name>.cloudflareaccess.com<br/>    allowed_email        = string # Cloudflare account email allowed through Access<br/>    session_duration     = optional(string, "24h")<br/>    mfa_session_duration = optional(string, "168h")<br/>    mfa_authenticators   = optional(list(string), ["totp", "security_key"]) # Cloudflare's order, otherwise every plan shows a diff<br/>  })</pre> | n/a | yes |
 | <a name="input_cloudflare_account_id"></a> [cloudflare\_account\_id](#input\_cloudflare\_account\_id) | Cloudflare Account ID for tunnel management | `string` | n/a | yes |
 | <a name="input_cloudflare_api_token"></a> [cloudflare\_api\_token](#input\_cloudflare\_api\_token) | Cloudflare API token for managing DNS and tunnels | `string` | n/a | yes |
 | <a name="input_cloudflare_zone"></a> [cloudflare\_zone](#input\_cloudflare\_zone) | Cloudflare zone/domain name | `string` | n/a | yes |

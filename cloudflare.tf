@@ -146,8 +146,14 @@ resource "cloudflare_zero_trust_organization" "homelab" {
   }
   mfa_required_for_all_apps = true
 
+  # Current values, set so the plan doesn't clear them
+  deny_unmatched_requests                     = false
+  deny_unmatched_requests_exempted_zone_names = []
+
   lifecycle {
     prevent_destroy = true
+    # The API returns only {enabled = false}, but the provider requires action and threshold days to set it
+    ignore_changes = [service_token_inactivity]
   }
 }
 
