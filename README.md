@@ -368,7 +368,7 @@ tofu init
 | [proxmox_virtual_environment_user.pulse_monitor](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/virtual_environment_user) | resource |
 | [random_id.cloudflared_tunnel_secret](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/id) | resource |
 | [random_password.pulse_api_token](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
-| [cloudflare_account_api_token_permission_groups_list.zone_analytics_read](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/data-sources/account_api_token_permission_groups_list) | data source |
+| [cloudflare_account_api_token_permission_groups_list.cloudflare_exporter](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/data-sources/account_api_token_permission_groups_list) | data source |
 | [cloudflare_zero_trust_tunnel_cloudflared_token.homelab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/data-sources/zero_trust_tunnel_cloudflared_token) | data source |
 
 ## Inputs
