@@ -40,12 +40,12 @@ ansible-playbook update.yaml --limit proxmox    # Proxmox nodes only
 ansible-playbook update.yaml --limit k3s_pis    # Raspberry Pis only
 ```
 
-**Monitoring:** plays tagged `monitoring` in `playbook.yaml` (Pulse, node_exporter on the Proxmox nodes, the Pulse agent on the Pis) and `k3s.yaml` (Secrets for the cluster's Pulse agent token and the k3s Alertmanager's Slack webhook)
+**Monitoring:** plays tagged `monitoring` in `playbook.yaml` (Pulse, node_exporter on the Proxmox nodes, the Pulse agent on the Pis) and `k3s.yaml` (Secrets for the cluster's Pulse agent token, the k3s Alertmanager's Slack webhook and the k3s Grafana admin login)
 - The `pulse_agent` role creates each agent's Pulse token through the Pulse API and hands it straight to the agent; nothing is stored in tfvars. A rerun replaces the token on whichever side was rebuilt
 
 ```bash
 ansible-playbook playbook.yaml --tags monitoring    # Only the monitoring plays
-ansible-playbook k3s.yaml --tags monitoring         # Only the two Secrets; skips the k3s install
+ansible-playbook k3s.yaml --tags monitoring         # Only the Secrets; skips the k3s install
 ```
 
 **k3s Cluster:** `ansible/k3s.yaml`
@@ -382,6 +382,7 @@ tofu init
 | <a name="input_cloudflare_zone_id"></a> [cloudflare\_zone\_id](#input\_cloudflare\_zone\_id) | Cloudflare Zone ID for the domain | `string` | n/a | yes |
 | <a name="input_gitea_admin"></a> [gitea\_admin](#input\_gitea\_admin) | Gitea admin user (TurnKey's gitea account): its password, and its email, which is also the mailer's From address | <pre>object({<br/>    password = string<br/>    email    = string<br/>  })</pre> | n/a | yes |
 | <a name="input_gitea_db_password"></a> [gitea\_db\_password](#input\_gitea\_db\_password) | Password for Gitea PostgreSQL database user | `string` | n/a | yes |
+| <a name="input_grafana_admin_password"></a> [grafana\_admin\_password](#input\_grafana\_admin\_password) | Password for the k3s Grafana admin user; Grafana only applies it on first start | `string` | n/a | yes |
 | <a name="input_iso_downloads"></a> [iso\_downloads](#input\_iso\_downloads) | ISO files to download to Proxmox storage | <pre>map(object({<br/>    url                     = string<br/>    file_name               = optional(string)<br/>    checksum                = optional(string)<br/>    checksum_algorithm      = optional(string) # "md5", "sha1", "sha224", "sha256", "sha384", "sha512"<br/>    decompression_algorithm = optional(string)<br/>    verify                  = optional(bool, true)<br/>    overwrite               = optional(bool, true)<br/>    overwrite_unmanaged     = optional(bool, false)<br/>    upload_timeout          = optional(number, 1800)<br/>  }))</pre> | `{}` | no |
 | <a name="input_k3s_defaults"></a> [k3s\_defaults](#input\_k3s\_defaults) | Default configuration for K3s VMs | <pre>object({<br/>    disk_interface = string<br/>    disk_size      = number<br/>    qemu_agent = object({<br/>      enabled = bool<br/>      timeout = string<br/>    })<br/>    behavior = object({<br/>      on_boot         = bool<br/>      started         = bool<br/>      stop_on_destroy = bool<br/>    })<br/>  })</pre> | <pre>{<br/>  "behavior": {<br/>    "on_boot": true,<br/>    "started": true,<br/>    "stop_on_destroy": true<br/>  },<br/>  "disk_interface": "scsi0",<br/>  "disk_size": 17,<br/>  "qemu_agent": {<br/>    "enabled": true,<br/>    "timeout": "4m"<br/>  }<br/>}</pre> | no |
 | <a name="input_k3s_pi_01_ip"></a> [k3s\_pi\_01\_ip](#input\_k3s\_pi\_01\_ip) | IP address for K3s Raspberry Pi control node 01 | `string` | n/a | yes |

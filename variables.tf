@@ -263,6 +263,12 @@ variable "pulse_admin_password" {
   sensitive   = true
 }
 
+variable "grafana_admin_password" {
+  description = "Password for the k3s Grafana admin user; Grafana only applies it on first start"
+  type        = string
+  sensitive   = true
+}
+
 variable "slack_alerting_webhook" {
   description = "Slack incoming webhook URL for lab alerts (Pulse and other alerting)"
   type        = string

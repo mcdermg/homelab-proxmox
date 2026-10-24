@@ -167,6 +167,10 @@ ${vm.name}
 %{ endfor ~}
 pi-control
 
+# Written to the Grafana admin Secret by k3s.yaml from the first server
+[server:vars]
+grafana_admin_password=${grafana_admin_password}
+
 [agent]
 %{ for vm in k3s_vms ~}
 %{ if vm.role == "worker" ~}

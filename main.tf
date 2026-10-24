@@ -279,6 +279,9 @@ resource "local_file" "ansible_hosts_file" {
     # Slack webhook for lab alerts
     slack_alerting_webhook = var.slack_alerting_webhook
 
+    # k3s Grafana admin login
+    grafana_admin_password = var.grafana_admin_password
+
     # Pulse first-time setup
     pulse_admin_password   = var.pulse_admin_password
     pulse_api_token        = random_password.pulse_api_token.result
