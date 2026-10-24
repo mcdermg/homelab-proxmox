@@ -167,12 +167,9 @@ ${vm.name}
 %{ endfor ~}
 pi-control
 
-# Written to k3s Secrets by k3s.yaml from the first server: the Grafana admin login and the cloudflare-exporter settings
+# Written to the Grafana admin Secret by k3s.yaml from the first server
 [server:vars]
 grafana_admin_password=${grafana_admin_password}
-cloudflare_exporter_token=${cloudflare_exporter_token}
-cloudflare_account_id=${cloudflare_account_id}
-cloudflare_zone_id=${cloudflare_zone_id}
 
 [agent]
 %{ for vm in k3s_vms ~}
