@@ -47,6 +47,9 @@ locals {
     { name = "grafana", service = "http://192.168.1.14" },
     { name = "prometheus", service = "http://192.168.1.15" },
     { name = "pve02", service = "https://${var.proxmox_nodes.pve02.address}:8006" },
+    # ISP router admin page, on the house network: cloudflared reaches it through the MikroTik, like Gatus.
+    # It returns 403 to any Host but its own IP, and http:// redirects to https://192.168.0.1
+    { name = "isp", service = "https://192.168.0.1", host_header = "192.168.0.1" },
   ]
   # Derived map for for_each resources (DNS records, access applications) — order irrelevant there
   tunnel_services = { for item in local.tunnel_services_list : item.name => item.service }
@@ -113,15 +116,19 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "homelab" {
   tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.homelab.id
   account_id = var.cloudflare_account_id
 
+  # A new hostname is only routed once its Access app exists, so it's never briefly public
+  depends_on = [cloudflare_zero_trust_access_application.tunnel_services]
+
   config = {
     ingress = concat(
       [
         for item in local.tunnel_services_list : {
           hostname = "${item.name}.${var.cloudflare_zone}"
           service  = item.service
-          # Proxmox serves a self-signed certificate
+          # Proxmox and the ISP router serve self-signed certificates
           origin_request = startswith(item.service, "https://") ? {
-            no_tls_verify = true
+            no_tls_verify    = true
+            http_host_header = lookup(item, "host_header", null)
           } : null
         }
       ],
@@ -271,4 +278,46 @@ resource "cloudflare_zero_trust_device_custom_profile" "lab_access" {
   match           = "identity.email == \"${var.cloudflare_access.allowed_email}\""
   service_mode_v2 = { mode = "warp" }
   exclude         = local.client_split_tunnel_exclude
+}
+
+# GATEWAY DNS FILTERING
+# Policies apply to every query Gateway sees: the MikroTik over DoH (location below) and enrolled clients anywhere
+resource "cloudflare_zero_trust_dns_location" "home" {
+  account_id = var.cloudflare_account_id
+  name       = "Home"
+  networks   = []
+  max_ttl    = { mode = "inherit" } # the default; set because the provider errors when it's unknown
+  # DoH only: the IPv4 and IPv6 endpoints need a fixed source IP, which the ISP doesn't give
+  # networks = [] and require_token set explicitly: the provider errors on unknown values there (5.27)
+  endpoints = {
+    doh  = { enabled = true, networks = [], require_token = false }
+    dot  = { enabled = false, networks = [] }
+    ipv4 = { enabled = false }
+    ipv6 = { enabled = false, networks = [] }
+  }
+
+  # The empty lists read back as null, so they'd show as a diff on every plan (provider issue #7400)
+  lifecycle {
+    ignore_changes = [endpoints.doh.networks, endpoints.dot.networks, endpoints.ipv6.networks]
+  }
+}
+
+resource "cloudflare_zero_trust_gateway_policy" "block_security_threats" {
+  account_id  = var.cloudflare_account_id
+  name        = "Block security threats"
+  description = "Cloudflare's security categories (malware, phishing, C2 and so on)"
+  enabled     = true
+  action      = "block"
+  filters     = ["dns"]
+  traffic     = "any(dns.security_category[*] in {68 178 80 83 176 175 117 131 134 151 153})"
+}
+
+resource "cloudflare_zero_trust_gateway_policy" "block_ads" {
+  account_id  = var.cloudflare_account_id
+  name        = "Block ads"
+  description = "Content category 66: Ads > Advertisements"
+  enabled     = true
+  action      = "block"
+  filters     = ["dns"]
+  traffic     = "any(dns.content_category[*] in {66})"
 }
