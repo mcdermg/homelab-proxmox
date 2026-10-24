@@ -40,7 +40,7 @@ ansible-playbook update.yaml --limit proxmox    # Proxmox nodes only
 ansible-playbook update.yaml --limit k3s_pis    # Raspberry Pis only
 ```
 
-**Monitoring:** plays tagged `monitoring` in `playbook.yaml` (Pulse, node_exporter on the Proxmox nodes, the Pulse agent on the Pis, cloudflared metrics on the container IP) and `k3s.yaml` (Secrets for the cluster's Pulse agent token, the k3s Alertmanager's Slack webhook and the k3s Grafana admin login)
+**Monitoring:** plays tagged `monitoring` in `playbook.yaml` (Pulse, node_exporter on the Proxmox nodes, the Pulse agent on the Pis, cloudflared metrics on the container IP) and `k3s.yaml` (Secrets for the cluster's Pulse agent token, the k3s Alertmanager's Slack webhook, the k3s Grafana admin login and the cloudflare-exporter token)
 - The `pulse_agent` role creates each agent's Pulse token through the Pulse API and hands it straight to the agent; nothing is stored in tfvars. A rerun replaces the token on whichever side was rebuilt
 
 ```bash
@@ -344,6 +344,7 @@ tofu init
 
 | Name | Type |
 | ---- | ---- |
+| [cloudflare_account_token.cloudflare_exporter](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/account_token) | resource |
 | [cloudflare_zero_trust_access_application.app_launcher](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_application) | resource |
 | [cloudflare_zero_trust_access_application.device_enrollment](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_application) | resource |
 | [cloudflare_zero_trust_access_application.tunnel_services](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_application) | resource |
@@ -367,6 +368,7 @@ tofu init
 | [proxmox_virtual_environment_user.pulse_monitor](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/virtual_environment_user) | resource |
 | [random_id.cloudflared_tunnel_secret](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/id) | resource |
 | [random_password.pulse_api_token](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
+| [cloudflare_account_api_token_permission_groups_list.zone_analytics_read](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/data-sources/account_api_token_permission_groups_list) | data source |
 | [cloudflare_zero_trust_tunnel_cloudflared_token.homelab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/data-sources/zero_trust_tunnel_cloudflared_token) | data source |
 
 ## Inputs

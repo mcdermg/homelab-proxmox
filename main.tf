@@ -282,6 +282,11 @@ resource "local_file" "ansible_hosts_file" {
     # k3s Grafana admin login
     grafana_admin_password = var.grafana_admin_password
 
+    # k3s cloudflare-exporter: its read-only token and what to scrape
+    cloudflare_exporter_token = cloudflare_account_token.cloudflare_exporter.value
+    cloudflare_account_id     = var.cloudflare_account_id
+    cloudflare_zone_id        = var.cloudflare_zone_id
+
     # Pulse first-time setup
     pulse_admin_password   = var.pulse_admin_password
     pulse_api_token        = random_password.pulse_api_token.result

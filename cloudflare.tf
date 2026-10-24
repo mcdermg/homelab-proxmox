@@ -97,6 +97,27 @@ data "cloudflare_zero_trust_tunnel_cloudflared_token" "homelab" {
   tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.homelab.id
 }
 
+# EXPORTER TOKEN
+# Read-only token for the cloudflare-exporter in k3s (LAB-162): zone Analytics Read and nothing else.
+# Creating it needs Account API Tokens Edit on the provider's token
+data "cloudflare_account_api_token_permission_groups_list" "zone_analytics_read" {
+  account_id = var.cloudflare_account_id
+  name       = "Analytics%20Read"
+  scope      = "com.cloudflare.api.account.zone"
+}
+
+resource "cloudflare_account_token" "cloudflare_exporter" {
+  account_id = var.cloudflare_account_id
+  name       = "cloudflare-exporter"
+
+  policies = [{
+    effect = "allow"
+    # one() fails the plan if the lookup doesn't find exactly one group
+    permission_groups = [{ id = one(data.cloudflare_account_api_token_permission_groups_list.zone_analytics_read.result).id }]
+    resources         = jsonencode({ "com.cloudflare.api.account.zone.${var.cloudflare_zone_id}" = "*" })
+  }]
+}
+
 module "tunnel_dns_records" {
   source = "./modules/cloudflare_dns"
 

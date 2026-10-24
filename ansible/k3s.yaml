@@ -144,3 +144,35 @@
       changed_when: true
       no_log: true
       when: grafana_admin_secret.stdout | b64decode != grafana_admin_password
+
+# The k3s cloudflare-exporter (homelab-argocd-config, LAB-163) reads its settings from this Secret as env vars,
+# so neither the token nor the account and zone IDs sit in the public repo. OpenTofu creates the token (LAB-162)
+- name: Give the k3s cloudflare-exporter its token
+  hosts: server[0]
+  gather_facts: false
+  become: true
+  tags: monitoring
+  tasks:
+    - name: Read the token in the exporter Secret
+      ansible.builtin.command:
+        cmd: k3s kubectl -n monitoring get secret cloudflare-exporter -o jsonpath={.data.CF_API_TOKEN}
+      register: cloudflare_exporter_secret
+      changed_when: false
+      failed_when: cloudflare_exporter_secret.rc not in [0, 1]
+      no_log: true
+
+    # The token goes through stdin, so it never reaches the command line
+    - name: Write the settings to the exporter Secret
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          k3s kubectl create namespace monitoring --dry-run=client -o yaml | k3s kubectl apply -f -
+          k3s kubectl -n monitoring create secret generic cloudflare-exporter --from-file=CF_API_TOKEN=/dev/stdin \
+            --from-literal=CF_ACCOUNTS={{ cloudflare_account_id }} --from-literal=CF_ZONES={{ cloudflare_zone_id }} \
+            --dry-run=client -o yaml | k3s kubectl apply --server-side -f -
+        executable: /bin/bash
+        stdin: "{{ cloudflare_exporter_token }}"
+        stdin_add_newline: false
+      changed_when: true
+      no_log: true
+      when: cloudflare_exporter_secret.stdout | b64decode != cloudflare_exporter_token
