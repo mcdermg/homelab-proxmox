@@ -243,6 +243,47 @@
           - "Tunnel ID: {{ cloudflare_tunnel_id }}"
           - "================================"
 
+# cloudflared only serves metrics on localhost by default; TUNNEL_METRICS moves them to the container IP so the
+# k3s Prometheus can scrape them (LAB-164). One container at a time, so the other replica keeps the tunnel up
+- name: Expose cloudflared metrics to Prometheus
+  hosts: cloudflared_host
+  gather_facts: false
+  serial: 1
+  tags: monitoring
+  vars:
+    cloudflared_metrics_port: 20241
+  tasks:
+    - name: Create the cloudflared drop-in directory
+      ansible.builtin.file:
+        path: /etc/systemd/system/cloudflared.service.d
+        state: directory
+        mode: '0755'
+
+    - name: Listen for metrics on the container IP
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/cloudflared.service.d/metrics.conf
+        content: |
+          [Service]
+          Environment=TUNNEL_METRICS={{ ansible_host }}:{{ cloudflared_metrics_port }}
+        mode: '0644'
+      register: cloudflared_metrics_dropin
+
+    - name: Restart cloudflared onto the metrics address
+      ansible.builtin.systemd:
+        name: cloudflared
+        state: restarted
+        daemon_reload: true
+      when: cloudflared_metrics_dropin is changed
+
+    # /ready returns 200 once the tunnel is connected again, so the next container only restarts after this one is back
+    - name: Wait for the tunnel to reconnect
+      ansible.builtin.uri:
+        url: "http://{{ ansible_host }}:{{ cloudflared_metrics_port }}/ready"
+      register: cloudflared_ready
+      until: cloudflared_ready.status == 200
+      retries: 12
+      delay: 5
+
 # Plain Debian 13 containers: OpenTofu creates and starts them with the root SSH key, so these plays connect directly
 # raw needs no temp dir, so creating it here stops the first module run on a fresh container warning that it had to
 - name: Prepare the SSH-managed containers
