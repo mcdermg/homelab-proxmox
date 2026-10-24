@@ -47,8 +47,9 @@ locals {
     { name = "grafana", service = "http://192.168.1.14" },
     { name = "prometheus", service = "http://192.168.1.15" },
     { name = "pve02", service = "https://${var.proxmox_nodes.pve02.address}:8006" },
-    # ISP router admin page, on the house network: cloudflared reaches it through the MikroTik, like Gatus
-    { name = "isp", service = "http://192.168.0.1" },
+    # ISP router admin page, on the house network: cloudflared reaches it through the MikroTik, like Gatus.
+    # It returns 403 to any Host but its own IP, and http:// redirects to https://192.168.0.1
+    { name = "isp", service = "https://192.168.0.1", host_header = "192.168.0.1" },
   ]
   # Derived map for for_each resources (DNS records, access applications) — order irrelevant there
   tunnel_services = { for item in local.tunnel_services_list : item.name => item.service }
@@ -124,9 +125,10 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "homelab" {
         for item in local.tunnel_services_list : {
           hostname = "${item.name}.${var.cloudflare_zone}"
           service  = item.service
-          # Proxmox serves a self-signed certificate
+          # Proxmox and the ISP router serve self-signed certificates
           origin_request = startswith(item.service, "https://") ? {
-            no_tls_verify = true
+            no_tls_verify    = true
+            http_host_header = lookup(item, "host_header", null)
           } : null
         }
       ],
@@ -292,6 +294,11 @@ resource "cloudflare_zero_trust_dns_location" "home" {
     dot  = { enabled = false, networks = [] }
     ipv4 = { enabled = false }
     ipv6 = { enabled = false, networks = [] }
+  }
+
+  # The empty lists read back as null, so they'd show as a diff on every plan (provider issue #7400)
+  lifecycle {
+    ignore_changes = [endpoints.doh.networks, endpoints.dot.networks, endpoints.ipv6.networks]
   }
 }
 
