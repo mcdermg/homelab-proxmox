@@ -100,7 +100,8 @@ data "cloudflare_zero_trust_tunnel_cloudflared_token" "homelab" {
 # EXPORTER TOKEN
 # Read-only token for the cloudflare-exporter in k3s (LAB-162). The exporter (0.2.3) lists zones and accounts at
 # startup and exits if it can't, so it needs Zone Read and Account Settings Read besides Analytics Read.
-# Creating it needs Account API Tokens Edit on the provider's token
+# A user token, not an account token: 0.2.3 checks its token against /user/tokens/verify, which only accepts user
+# tokens (LAB-163). Creating it needs User > API Tokens > Edit on the provider's (user) token
 locals {
   cloudflare_exporter_permissions = {
     analytics_read        = { name = "Analytics Read", scope = "com.cloudflare.api.account.zone" }
@@ -109,21 +110,19 @@ locals {
   }
   # one() fails the plan if a lookup doesn't find exactly one group
   cloudflare_exporter_group_ids = {
-    for key, group in data.cloudflare_account_api_token_permission_groups_list.cloudflare_exporter : key => one(group.result).id
+    for key, group in data.cloudflare_api_token_permission_groups_list.cloudflare_exporter : key => one(group.result).id
   }
 }
 
-data "cloudflare_account_api_token_permission_groups_list" "cloudflare_exporter" {
+data "cloudflare_api_token_permission_groups_list" "cloudflare_exporter" {
   for_each = local.cloudflare_exporter_permissions
 
-  account_id = var.cloudflare_account_id
-  name       = replace(each.value.name, " ", "%20") # the API wants the name URL-encoded
-  scope      = each.value.scope
+  name  = replace(each.value.name, " ", "%20") # the API wants the name URL-encoded
+  scope = each.value.scope
 }
 
-resource "cloudflare_account_token" "cloudflare_exporter" {
-  account_id = var.cloudflare_account_id
-  name       = "cloudflare-exporter"
+resource "cloudflare_api_token" "cloudflare_exporter" {
+  name = "cloudflare-exporter"
 
   policies = [
     {

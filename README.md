@@ -344,7 +344,7 @@ tofu init
 
 | Name | Type |
 | ---- | ---- |
-| [cloudflare_account_token.cloudflare_exporter](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/account_token) | resource |
+| [cloudflare_api_token.cloudflare_exporter](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/api_token) | resource |
 | [cloudflare_zero_trust_access_application.app_launcher](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_application) | resource |
 | [cloudflare_zero_trust_access_application.device_enrollment](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_application) | resource |
 | [cloudflare_zero_trust_access_application.tunnel_services](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/resources/zero_trust_access_application) | resource |
@@ -368,7 +368,7 @@ tofu init
 | [proxmox_virtual_environment_user.pulse_monitor](https://registry.terraform.io/providers/bpg/proxmox/latest/docs/resources/virtual_environment_user) | resource |
 | [random_id.cloudflared_tunnel_secret](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/id) | resource |
 | [random_password.pulse_api_token](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
-| [cloudflare_account_api_token_permission_groups_list.cloudflare_exporter](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/data-sources/account_api_token_permission_groups_list) | data source |
+| [cloudflare_api_token_permission_groups_list.cloudflare_exporter](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/data-sources/api_token_permission_groups_list) | data source |
 | [cloudflare_zero_trust_tunnel_cloudflared_token.homelab](https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs/data-sources/zero_trust_tunnel_cloudflared_token) | data source |
 
 ## Inputs

@@ -283,7 +283,7 @@ resource "local_file" "ansible_hosts_file" {
     grafana_admin_password = var.grafana_admin_password
 
     # k3s cloudflare-exporter: its read-only token and what to scrape
-    cloudflare_exporter_token = cloudflare_account_token.cloudflare_exporter.value
+    cloudflare_exporter_token = cloudflare_api_token.cloudflare_exporter.value
     cloudflare_account_id     = var.cloudflare_account_id
     cloudflare_zone_id        = var.cloudflare_zone_id
 
