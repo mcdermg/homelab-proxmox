@@ -112,3 +112,35 @@
       changed_when: true
       no_log: true
       when: alertmanager_slack_secret.stdout | b64decode != slack_alerting_webhook
+
+# The k3s Grafana (homelab-argocd-config, LAB-145) reads its admin login from this Secret, which stays
+# out of the public repo. Grafana only applies the password on first start, so the Secret has to exist
+# before Grafana's volume does; changing it later needs grafana cli admin reset-admin-password
+- name: Give the k3s Grafana its admin login
+  hosts: server[0]
+  gather_facts: false
+  become: true
+  tags: monitoring
+  tasks:
+    - name: Read the password in the Grafana Secret
+      ansible.builtin.command:
+        cmd: k3s kubectl -n monitoring get secret grafana-admin -o jsonpath={.data.admin-password}
+      register: grafana_admin_secret
+      changed_when: false
+      failed_when: grafana_admin_secret.rc not in [0, 1]
+      no_log: true
+
+    # Through stdin, so the password never reaches the command line
+    - name: Write the login to the Grafana Secret
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          k3s kubectl create namespace monitoring --dry-run=client -o yaml | k3s kubectl apply -f -
+          k3s kubectl -n monitoring create secret generic grafana-admin --from-literal=admin-user=admin \
+            --from-file=admin-password=/dev/stdin --dry-run=client -o yaml | k3s kubectl apply --server-side -f -
+        executable: /bin/bash
+        stdin: "{{ grafana_admin_password }}"
+        stdin_add_newline: false
+      changed_when: true
+      no_log: true
+      when: grafana_admin_secret.stdout | b64decode != grafana_admin_password
