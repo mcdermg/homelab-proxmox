@@ -14,6 +14,9 @@
 [hapac2]
     # The lab MikroTik; homelab-proxmox's k3s.yaml renders this into the mktxp-credentials Secret (LAB-159)
     hostname = {{ mktxp_router_ip }}
+    # The hAP ac2 has no health sensors or PoE; these queries only log "no such command prefix"
+    health = False
+    poe = False
 
 [default]
     # this affects configuration of all routers, unless overloaded on their specific levels
