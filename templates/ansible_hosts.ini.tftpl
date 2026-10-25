@@ -167,9 +167,11 @@ ${vm.name}
 %{ endfor ~}
 pi-control
 
-# Written to the Grafana admin Secret by k3s.yaml from the first server
+# Written to k3s Secrets by k3s.yaml from the first server: the Grafana admin login and mktxp's MikroTik login
 [server:vars]
 grafana_admin_password=${grafana_admin_password}
+mktxp_router_ip=${mktxp_router_ip}
+mktxp_password=${mktxp_password}
 
 [agent]
 %{ for vm in k3s_vms ~}
