@@ -269,6 +269,12 @@ variable "grafana_admin_password" {
   sensitive   = true
 }
 
+variable "mktxp_password" {
+  description = "Password of the read-only mktxp user on the MikroTik (created in mikrotik-hapac2, LAB-158); the same value as there"
+  type        = string
+  sensitive   = true
+}
+
 variable "slack_alerting_webhook" {
   description = "Slack incoming webhook URL for lab alerts (Pulse and other alerting)"
   type        = string

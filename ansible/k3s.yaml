@@ -144,3 +144,42 @@
       changed_when: true
       no_log: true
       when: grafana_admin_secret.stdout | b64decode != grafana_admin_password
+
+# The mktxp exporter (homelab-argocd-config, LAB-159) reads its whole config directory from this Secret: mktxp.conf
+# (the MikroTik and its read-only login, LAB-158) and _mktxp.conf (mktxp's own defaults), out of the public repo
+- name: Give the mktxp exporter its MikroTik login
+  hosts: server[0]
+  gather_facts: false
+  become: true
+  tags: monitoring
+  vars:
+    mktxp_username: mktxp
+    mktxp_files:
+      mktxp.conf: "{{ lookup('ansible.builtin.template', 'mktxp/mktxp.conf.j2') }}"
+      _mktxp.conf: "{{ lookup('ansible.builtin.file', 'mktxp/_mktxp.conf') }}"
+  tasks:
+    - name: Read the mktxp Secret
+      ansible.builtin.command:
+        cmd: k3s kubectl -n monitoring get secret mktxp-credentials -o json
+      register: mktxp_secret
+      changed_when: false
+      failed_when: mktxp_secret.rc not in [0, 1]
+      no_log: true
+
+    # The whole Secret goes through stdin, so the password never reaches the command line
+    - name: Write the config to the mktxp Secret
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          k3s kubectl create namespace monitoring --dry-run=client -o yaml | k3s kubectl apply -f -
+          k3s kubectl apply --server-side -f -
+        executable: /bin/bash
+        stdin: "{{ {'apiVersion': 'v1', 'kind': 'Secret', 'type': 'Opaque',
+                   'metadata': {'name': 'mktxp-credentials', 'namespace': 'monitoring'},
+                   'stringData': mktxp_files} | to_json }}"
+      changed_when: true
+      no_log: true
+      when: >-
+        mktxp_secret.rc != 0 or
+        ((mktxp_secret.stdout | from_json).data['mktxp.conf'] | b64decode) != mktxp_files['mktxp.conf'] or
+        ((mktxp_secret.stdout | from_json).data['_mktxp.conf'] | b64decode) != mktxp_files['_mktxp.conf']

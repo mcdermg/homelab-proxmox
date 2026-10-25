@@ -282,6 +282,10 @@ resource "local_file" "ansible_hosts_file" {
     # k3s Grafana admin login
     grafana_admin_password = var.grafana_admin_password
 
+    # mktxp exporter in k3s: the MikroTik and its read-only user's password (LAB-159)
+    mktxp_router_ip = var.network.gateway
+    mktxp_password  = var.mktxp_password
+
     # Pulse first-time setup
     pulse_admin_password   = var.pulse_admin_password
     pulse_api_token        = random_password.pulse_api_token.result
