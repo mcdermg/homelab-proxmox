@@ -418,7 +418,7 @@ variable "lxc_containers" {
     }
     cloudflared = {
       vm_id            = 113
-      name             = "cloudflared"
+      name             = "cloudflared-01"
       template_file_id = "debian-12-turnkey-core_18.1-1_amd64.tar.gz"
       os_type          = "debian"
       cores            = 1
@@ -472,7 +472,7 @@ variable "lxc_containers" {
     #}
     bind9 = {
       vm_id            = 115
-      name             = "bind9"
+      name             = "bind9-01"
       template_file_id = "debian-12-turnkey-core_18.1-1_amd64.tar.gz"
       os_type          = "debian"
       cores            = 2
