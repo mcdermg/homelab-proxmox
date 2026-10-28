@@ -1,6 +1,6 @@
 ---
 # roles/keepalived/tasks/main.yaml
-# Runs on every host in bind9_host; each one's VRRP peers are the others
+# Runs on every host in bind9; each one's VRRP peers are the others
 - name: Install keepalived
   ansible.builtin.apt:
     name: keepalived

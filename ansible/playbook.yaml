@@ -141,7 +141,7 @@
 
 # One DNS IP on whichever bind9 is up, so the MikroTik has a single server to forward to (LAB-117)
 - name: Float the DNS IP between the bind9 servers
-  hosts: bind9_host
+  hosts: bind9
   gather_facts: false
   roles:
     - keepalived
@@ -165,7 +165,7 @@
       delegate_to: localhost
 
 - name: Install and configure cloudflared on container
-  hosts: cloudflared_host
+  hosts: cloudflared
   gather_facts: true
 
   tasks:
@@ -205,17 +205,15 @@
           - "================================"
       when: not cloudflared_needs_install
 
-    - name: Download the cloudflared Linux package
-      ansible.builtin.get_url:
-        url: https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-        dest: /tmp/cloudflared-linux-amd64.deb
-        mode: '0644'
-      when: cloudflared_needs_install
+    # Every run, so existing containers get the repo too and update.yaml can upgrade them
+    - name: Add the cloudflared apt repo
+      ansible.builtin.include_tasks: tasks/cloudflared_apt_repo.yaml
 
     - name: Install cloudflared package
       ansible.builtin.apt:
-        deb: /tmp/cloudflared-linux-amd64.deb
+        name: cloudflared
         state: present
+        update_cache: true
       when: cloudflared_needs_install
 
     - name: Install the tunnel as a systemd service
@@ -246,12 +244,10 @@
 # cloudflared only serves metrics on localhost by default; TUNNEL_METRICS moves them to the container IP so the
 # k3s Prometheus can scrape them (LAB-164). One container at a time, so the other replica keeps the tunnel up
 - name: Expose cloudflared metrics to Prometheus
-  hosts: cloudflared_host
+  hosts: cloudflared
   gather_facts: false
   serial: 1
   tags: monitoring
-  vars:
-    cloudflared_metrics_port: 20241
   tasks:
     - name: Create the cloudflared drop-in directory
       ansible.builtin.file:

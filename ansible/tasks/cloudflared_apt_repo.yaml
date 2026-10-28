@@ -1,0 +1,24 @@
+---
+# Cloudflare's apt repo, so cloudflared upgrades through apt instead of a one-off GitHub .deb
+# deb822_repository needs python3-debian on the target
+- name: Install python3-debian
+  ansible.builtin.apt:
+    name: python3-debian
+    state: present
+
+- name: Add the cloudflared apt repo
+  ansible.builtin.deb822_repository:
+    name: cloudflared
+    uris: https://pkg.cloudflare.com/cloudflared
+    suites: any
+    components: main
+    signed_by: https://pkg.cloudflare.com/cloudflare-main.gpg
+
+# shortcut: clears the files the old apt_repository tasks left, so apt doesn't see the repo twice; drop once both replicas have run
+- name: Remove the old cloudflared repo files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/sources.list.d/cloudflared.list
+    - /usr/share/keyrings/cloudflare-main.gpg

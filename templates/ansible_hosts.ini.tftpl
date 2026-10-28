@@ -67,19 +67,15 @@ lxc_root_password=${lxc_root_password}
 lxc_ssh_public_key=${lxc_ssh_public_key}
 
 # Direct container access for post-configuration (root over SSH, from [lxc_containers:vars])
-[bind9_host]
+[bind9]
 %{ for key, ct in bind9_containers ~}
 ${ct.name} ansible_host=${ct.ip_address}
 %{ endfor ~}
 
-[cloudflared_host]
+[cloudflared]
 %{ for key, ct in cloudflared_containers ~}
 ${ct.name} ansible_host=${ct.ip_address}
 %{ endfor ~}
-
-[cloudflared_host:vars]
-ansible_user=root
-ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 
 # LXC Containers - Direct access for system updates
 [lxc_containers]
@@ -89,7 +85,7 @@ ${ct.name} ansible_host=${ct.ip_address}
 postgres ansible_host=${postgres_ip}
 gitea ansible_host=${gitea_ip}
 %{ for key, ct in cloudflared_containers ~}
-${ct.name}_update ansible_host=${ct.ip_address}
+${ct.name} ansible_host=${ct.ip_address}
 %{ endfor ~}
 
 [lxc_containers:children]

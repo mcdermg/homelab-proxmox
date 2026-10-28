@@ -32,12 +32,14 @@ OpenTofu + Ansible configuration for Proxmox VE homelab infrastructure including
 **System Updates:** `ansible/update.yaml`
 - Updates both Proxmox nodes, all LXC containers, and every k3s VM and Pi (the inventory lists whatever is in `k3s_vms`)
 - Runs in batches of 3 to avoid resource bottleneck
+- Upgrades cloudflared first, from Cloudflare's apt repo, one replica at a time: it restarts a replica only if it's behind the installed package and the other replica is connected, and waits for `/ready` before moving on
 - Use `--limit` to target specific groups or hosts
 
 ```bash
-ansible-playbook update.yaml                    # Update everything
-ansible-playbook update.yaml --limit proxmox    # Proxmox nodes only
-ansible-playbook update.yaml --limit k3s_pis    # Raspberry Pis only
+ansible-playbook update.yaml                           # Update everything
+ansible-playbook update.yaml --limit proxmox           # Proxmox nodes only
+ansible-playbook update.yaml --limit k3s_pis           # Raspberry Pis only
+ansible-playbook update.yaml --limit cloudflared       # cloudflared only
 ```
 
 **Monitoring:** plays tagged `monitoring` in `playbook.yaml` (Pulse, node_exporter on the Proxmox nodes, the Pulse agent on the Pis, cloudflared metrics on the container IP) and `k3s.yaml` (Secrets for the cluster's Pulse agent token, the k3s Alertmanager's Slack webhook, the k3s Grafana admin login and mktxp's MikroTik login)

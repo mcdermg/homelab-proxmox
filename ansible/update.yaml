@@ -7,6 +7,61 @@
 #   --limit k3s_cluster      - Update only K3s cluster (VMs + Pis)
 #   --limit k3s_pis          - Update only Raspberry Pis
 #   --limit postgres         - Update specific host
+#   --limit cloudflared      - Update only cloudflared, one replica at a time
+
+# The cloudflared package doesn't restart the service, so restart whenever the running version isn't the installed one.
+# One replica at a time, and only while the others are connected, so the tunnel stays up. Runs before the general
+# play, which then finds cloudflared already current
+- name: Update cloudflared one replica at a time
+  hosts: cloudflared
+  gather_facts: false
+  serial: 1
+  tasks:
+    - name: Add the cloudflared apt repo
+      ansible.builtin.include_tasks: tasks/cloudflared_apt_repo.yaml
+
+    - name: Install the latest cloudflared
+      ansible.builtin.apt:
+        name: cloudflared
+        state: latest
+        update_cache: true
+
+    - name: Read the installed version
+      ansible.builtin.command:
+        cmd: dpkg-query -W -f=${Version} cloudflared
+      register: cloudflared_installed
+      changed_when: false
+
+    - name: Read the running version
+      ansible.builtin.uri:
+        url: "http://{{ ansible_host }}:{{ cloudflared_metrics_port }}/metrics"
+        return_content: true
+      register: cloudflared_metrics
+
+    - name: Compare versions
+      ansible.builtin.set_fact:
+        cloudflared_running_version: "{{ cloudflared_metrics.content | regex_search('build_info\\{[^}]*version=\"([^\"]+)\"', '\\1') | first }}"
+
+    - name: Check the other replicas are connected before restarting this one
+      ansible.builtin.uri:
+        url: "http://{{ hostvars[item].ansible_host }}:{{ cloudflared_metrics_port }}/ready"
+      loop: "{{ groups['cloudflared'] | difference([inventory_hostname]) }}"
+      when: cloudflared_running_version != cloudflared_installed.stdout
+
+    - name: Restart cloudflared onto the installed version
+      ansible.builtin.systemd:
+        name: cloudflared
+        state: restarted
+      when: cloudflared_running_version != cloudflared_installed.stdout
+
+    # /ready returns 200 once the tunnel is connected again, so the next replica only restarts after this one is back
+    - name: Wait for the tunnel to reconnect
+      ansible.builtin.uri:
+        url: "http://{{ ansible_host }}:{{ cloudflared_metrics_port }}/ready"
+      register: cloudflared_ready
+      until: cloudflared_ready.status == 200
+      retries: 12
+      delay: 5
 
 - name: Update all Debian-based infrastructure
   hosts: debian_hosts
