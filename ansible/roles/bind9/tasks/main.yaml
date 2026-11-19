@@ -12,7 +12,9 @@
     bind9_needs_config: "{{ bind9_inithooks_check.stdout | int > 1 }}"
 
 - name: Stop bind9 container if needs configuration
-  ansible.builtin.shell: "if pct status {{ bind9_ctid }} | grep -q running; then pct stop {{ bind9_ctid }} && echo stopped; fi"
+  ansible.builtin.shell:
+    cmd: 'if [[ "$(pct status {{ bind9_ctid }})" == *running* ]]; then pct stop {{ bind9_ctid }} && echo stopped; fi'
+    executable: /bin/bash
   register: bind9_stop
   changed_when: "'stopped' in bind9_stop.stdout"
   become: true
@@ -174,8 +176,8 @@
     - name: Compare with the live zones in the container, ignoring the serial
       ansible.builtin.shell:
         cmd: >-
-          pct exec {{ bind9_ctid }} -- cat /etc/bind/zones/{{ item }} | grep -v '; Serial' |
-          diff -q - <(grep -v '; Serial' {{ bind9_zone_tmp.path }}/{{ item }}.compare)
+          diff -q <(pct exec {{ bind9_ctid }} -- grep -v '; Serial' /etc/bind/zones/{{ item }})
+          <(grep -v '; Serial' {{ bind9_zone_tmp.path }}/{{ item }}.compare)
         executable: /bin/bash
       register: bind9_zone_diff
       changed_when: false
@@ -195,11 +197,13 @@
         pct exec {{ bind9_ctid }} -- sh -c
         'named-checkzone {{ item | regex_replace('^db[.]', '') }} /etc/bind/zones/{{ item }}.new &&
         mv /etc/bind/zones/{{ item }}.new /etc/bind/zones/{{ item }}'
+      changed_when: true
       loop: "{{ bind9_changed_zones }}"
 
     - name: Reload bind9
       ansible.builtin.command:
         cmd: "pct exec {{ bind9_ctid }} -- rndc reload"
+      changed_when: true
       when: bind9_changed_zones | length > 0
 
   always:

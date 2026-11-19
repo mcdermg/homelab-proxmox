@@ -12,7 +12,9 @@
     postgres_needs_config: "{{ postgres_inithooks_check.stdout | int > 1 }}"
 
 - name: Stop postgres container if needs configuration
-  ansible.builtin.shell: "if pct status {{ postgres_ctid }} | grep -q running; then pct stop {{ postgres_ctid }} && echo stopped; fi"
+  ansible.builtin.shell:
+    cmd: 'if [[ "$(pct status {{ postgres_ctid }})" == *running* ]]; then pct stop {{ postgres_ctid }} && echo stopped; fi'
+    executable: /bin/bash
   register: postgres_stop
   changed_when: "'stopped' in postgres_stop.stdout"
   become: true

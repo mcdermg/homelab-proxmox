@@ -34,7 +34,7 @@
 # INSTALL
 # Also reruns on an installed agent when Pulse was rebuilt, to swap in the new token
 - name: Install the agent
-  when: pulse_agent_token_new is changed
+  when: pulse_agent_token_new is changed  # noqa: no-handler
   block:
     - name: Write the token for the installer
       ansible.builtin.copy:

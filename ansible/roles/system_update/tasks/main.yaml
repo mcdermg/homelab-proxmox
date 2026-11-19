@@ -1,5 +1,5 @@
 ---
-# roles/system-update/tasks/main.yaml
+# roles/system_update/tasks/main.yaml
 - name: Apt Update
   ansible.builtin.apt:
     update_cache: true
@@ -15,21 +15,21 @@
   ansible.builtin.apt:
     upgrade: "{{ 'dist' if 'proxmox' in group_names else 'yes' }}"
   check_mode: true
-  register: upgradeable
+  register: system_update_upgradeable
   failed_when: false
 
 # - name: Show Upgradeable packages
 #   ansible.builtin.debug:
-#     msg: "{{ upgradeable.stdout_lines }}"
-#   when: upgradeable.stdout_lines is defined
+#     msg: "{{ system_update_upgradeable.stdout_lines }}"
+#   when: system_update_upgradeable.stdout_lines is defined
 
 - name: Update and upgrade apt packages
   ansible.builtin.apt:
     upgrade: "{{ 'dist' if 'proxmox' in group_names else 'yes' }}"
     update_cache: true
     cache_valid_time: 86400 # One day
-  register: upgrade_result
-  failed_when: upgrade_result.failed and 'dpkg was interrupted' not in upgrade_result.msg | default('')
+  register: system_update_upgrade_result
+  failed_when: system_update_upgrade_result.failed and 'dpkg was interrupted' not in system_update_upgrade_result.msg | default('')
 
 - name: Clean unwanted apt packages
   ansible.builtin.apt:

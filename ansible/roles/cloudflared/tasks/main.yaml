@@ -12,7 +12,9 @@
     cloudflared_needs_config: "{{ cloudflared_inithooks_check.stdout | int > 1 }}"
 
 - name: Stop cloudflared container if needs configuration
-  ansible.builtin.shell: "if pct status {{ cloudflared_ctid }} | grep -q running; then pct stop {{ cloudflared_ctid }} && echo stopped; fi"
+  ansible.builtin.shell:
+    cmd: 'if [[ "$(pct status {{ cloudflared_ctid }})" == *running* ]]; then pct stop {{ cloudflared_ctid }} && echo stopped; fi'
+    executable: /bin/bash
   register: cloudflared_stop
   changed_when: "'stopped' in cloudflared_stop.stdout"
   become: true

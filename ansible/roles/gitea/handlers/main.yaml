@@ -1,5 +1,9 @@
 ---
 # roles/gitea/handlers/main.yaml
 - name: Start gitea container
-  ansible.builtin.shell: "pct status {{ gitea_ctid }} | grep -q running || pct start {{ gitea_ctid }}"
+  ansible.builtin.shell:
+    cmd: '[[ "$(pct status {{ gitea_ctid }})" == *running* ]] || { pct start {{ gitea_ctid }} && echo started; }'
+    executable: /bin/bash
+  register: gitea_start
+  changed_when: "'started' in gitea_start.stdout"
   become: true

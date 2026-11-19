@@ -94,7 +94,7 @@
       ansible.builtin.meta: flush_handlers
 
     - name: Wait for BIND9 installation to complete
-      ansible.builtin.shell:
+      ansible.builtin.command:
         cmd: "pct exec {{ bind9_ctid }} -- test -f /var/lib/inithooks/.99custom-bind9-init.done"
       register: bind9_install_check
       until: bind9_install_check.rc == 0
@@ -104,7 +104,7 @@
       changed_when: false
 
     - name: Wait for BIND9 service to be active
-      ansible.builtin.shell:
+      ansible.builtin.command:
         cmd: "pct exec {{ bind9_ctid }} -- systemctl is-active named"
       register: bind9_service_check
       until: bind9_service_check.stdout == "active"
@@ -269,7 +269,7 @@
         name: cloudflared
         state: restarted
         daemon_reload: true
-      when: cloudflared_metrics_dropin is changed
+      when: cloudflared_metrics_dropin is changed  # noqa: no-handler
 
     # /ready returns 200 once the tunnel is connected again, so the next container only restarts after this one is back
     - name: Wait for the tunnel to reconnect
