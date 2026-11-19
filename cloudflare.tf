@@ -62,15 +62,23 @@ locals {
   lab_cidr = "${cidrhost("${var.network.gateway}${var.network.cidr_suffix}", 0)}${var.network.cidr_suffix}"
 
   # Cloudflare's default client exclude list, with 192.168.0.0/16 replaced by everything in it except the lab /24
-  client_split_tunnel_exclude = [
-    for address in [
-      "ff05::/16", "ff04::/16", "ff03::/16", "ff02::/16", "ff01::/16", "fe80::/10", "fd00::/8",
-      "255.255.255.255/32", "240.0.0.0/4", "224.0.0.0/24", "192.0.0.0/24", "172.16.0.0/12",
-      "169.254.0.0/16", "100.64.0.0/10", "10.0.0.0/8",
-      "192.168.0.0/24", "192.168.2.0/23", "192.168.4.0/22", "192.168.8.0/21",
-      "192.168.16.0/20", "192.168.32.0/19", "192.168.64.0/18", "192.168.128.0/17",
-    ] : { address = address }
-  ]
+  # The two 198.41.x ranges keep cloudflared on a client machine (laptop tunnels) out of the client tunnel
+  client_split_tunnel_exclude = concat(
+    [
+      for address in [
+        "ff05::/16", "ff04::/16", "ff03::/16", "ff02::/16", "ff01::/16", "fe80::/10", "fd00::/8",
+        "255.255.255.255/32", "240.0.0.0/4", "224.0.0.0/24",
+        # Order matches what the Cloudflare API returns, so the plan stays clean
+        "192.168.8.0/21", "192.168.64.0/18", "192.168.4.0/22", "192.168.32.0/19",
+        "192.168.2.0/23", "192.168.16.0/20", "192.168.128.0/17", "192.168.0.0/24",
+        "192.0.0.0/24", "172.16.0.0/12", "169.254.0.0/16", "100.64.0.0/10", "10.0.0.0/8",
+      ] : { address = address }
+    ],
+    [
+      { address = "198.41.192.0/24", description = "cloudflared edge region 1 — bypass WARP" },
+      { address = "198.41.200.0/24", description = "cloudflared edge region 2 — bypass WARP" },
+    ],
+  )
 
   # LAB-133: IP allowlist fallback, see the data sources at the top
   # ipv4_addr = chomp(data.http.my_ipv4.response_body)
