@@ -1,5 +1,9 @@
 ---
 # roles/cloudflared/handlers/main.yaml
 - name: Start cloudflared container
-  ansible.builtin.shell: "pct status {{ cloudflared_ctid }} | grep -q running || pct start {{ cloudflared_ctid }}"
+  ansible.builtin.shell:
+    cmd: '[[ "$(pct status {{ cloudflared_ctid }})" == *running* ]] || { pct start {{ cloudflared_ctid }} && echo started; }'
+    executable: /bin/bash
+  register: cloudflared_start
+  changed_when: "'started' in cloudflared_start.stdout"
   become: true

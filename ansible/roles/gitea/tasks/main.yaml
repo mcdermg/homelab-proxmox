@@ -12,11 +12,11 @@
     gitea_needs_config: "{{ gitea_inithooks_check.stdout | int > 1 }}"
 
 - name: Wait for postgres container to complete firstboot and all reboots
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: "pct exec {{ postgres_ctid }} -- stat -c %s /etc/inithooks.conf"
   delegate_to: "{{ groups['postgres_node'][0] }}"
-  register: inithooks_size
-  until: inithooks_size.stdout | int <= 1
+  register: gitea_inithooks_size
+  until: gitea_inithooks_size.stdout | int <= 1
   retries: 120  # 20 minutes for updates + reboots
   delay: 10
   become: true
@@ -27,8 +27,8 @@
   ansible.builtin.command:
     cmd: "pct exec {{ postgres_ctid }} -- awk '{print int($1)}' /proc/uptime"
   delegate_to: "{{ groups['postgres_node'][0] }}"
-  register: container_uptime
-  until: container_uptime.stdout | int > 60
+  register: gitea_container_uptime
+  until: gitea_container_uptime.stdout | int > 60
   retries: 30
   delay: 10
   become: true
@@ -44,11 +44,11 @@
   when: gitea_needs_config
 
 - name: Verify gitea database exists and is accessible
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: "pct exec {{ postgres_ctid }} -- su - postgres -c \"psql -d gitea -c 'SELECT 1'\""
   delegate_to: "{{ groups['postgres_node'][0] }}"
-  register: db_test
-  until: db_test.rc == 0
+  register: gitea_db_test
+  until: gitea_db_test.rc == 0
   retries: 10
   delay: 5
   become: true
@@ -56,7 +56,9 @@
   when: gitea_needs_config
 
 - name: Stop gitea container if needs configuration
-  ansible.builtin.shell: "if pct status {{ gitea_ctid }} | grep -q running; then pct stop {{ gitea_ctid }} && echo stopped; fi"
+  ansible.builtin.shell:
+    cmd: 'if [[ "$(pct status {{ gitea_ctid }})" == *running* ]]; then pct stop {{ gitea_ctid }} && echo stopped; fi'
+    executable: /bin/bash
   register: gitea_stop
   changed_when: "'stopped' in gitea_stop.stdout"
   become: true

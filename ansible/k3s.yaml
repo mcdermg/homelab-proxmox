@@ -73,7 +73,7 @@
         stdin_add_newline: false
       changed_when: true
       no_log: true
-      when: pulse_agent_token_new is changed
+      when: pulse_agent_token_new is changed  # noqa: no-handler
 
     # The agent reads the token at startup; a first-time Secret needs no restart, the pod is waiting for it
     - name: Restart the agent onto the new token

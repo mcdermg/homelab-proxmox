@@ -1,5 +1,9 @@
 ---
 # roles/postgres/handlers/main.yaml
 - name: Start postgres container
-  ansible.builtin.shell: "pct status {{ postgres_ctid }} | grep -q running || pct start {{ postgres_ctid }}"
+  ansible.builtin.shell:
+    cmd: '[[ "$(pct status {{ postgres_ctid }})" == *running* ]] || { pct start {{ postgres_ctid }} && echo started; }'
+    executable: /bin/bash
+  register: postgres_start
+  changed_when: "'started' in postgres_start.stdout"
   become: true

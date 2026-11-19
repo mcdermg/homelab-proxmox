@@ -1,5 +1,9 @@
 ---
 # roles/bind9/handlers/main.yaml
 - name: Start bind9 container
-  ansible.builtin.shell: "pct status {{ bind9_ctid }} | grep -q running || pct start {{ bind9_ctid }}"
+  ansible.builtin.shell:
+    cmd: '[[ "$(pct status {{ bind9_ctid }})" == *running* ]] || { pct start {{ bind9_ctid }} && echo started; }'
+    executable: /bin/bash
+  register: bind9_start
+  changed_when: "'started' in bind9_start.stdout"
   become: true

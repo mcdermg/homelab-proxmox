@@ -23,7 +23,7 @@
     - name: Install the latest cloudflared
       ansible.builtin.apt:
         name: cloudflared
-        state: latest
+        state: latest  # noqa: package-latest
         update_cache: true
 
     - name: Read the installed version
@@ -70,7 +70,7 @@
   serial: 3 # Update 3 hosts at a time to reduce Proxmox host resource bottleneck. 2x Pis not part of Proxmox.
 
   roles:
-    - system-update
+    - system_update
 
   post_tasks:
     - name: Display completion message
